@@ -1,4 +1,3 @@
-// Function Audio Synth untuk efek suara sukses pembayaran
 function playSuccessSound() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -6,8 +5,8 @@ function playSuccessSound() {
     const gain = audioCtx.createGain();
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3); // A5
+    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
 
     gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
@@ -18,19 +17,29 @@ function playSuccessSound() {
     osc.start();
     osc.stop(audioCtx.currentTime + 0.3);
   } catch (e) {
-    console.log("Audio playback not allowed yet without user interaction");
+    console.log("Audio playback issue", e);
   }
 }
 
-// Inisialisasi Logika Halaman Pembayaran QRIS
-function initPaymentStep() {
-  let timeLeft = 299; // 5 Menit
+async function initPaymentStep() {
+  const currentConfig = await getAppConfigFromDB();
+
+  const priceElem = document.getElementById("qris-price-display");
+  if (priceElem) {
+    priceElem.textContent = `Rp ${Number(currentConfig.price).toLocaleString("id-ID")}`;
+  }
+
+  const qrisImgElem = document.getElementById("qris-image-display");
+  if (qrisImgElem) {
+    qrisImgElem.src = currentConfig.qrisImage;
+  }
+
+  let timeLeft = parseInt(currentConfig.qrisTime) || 300;
   const timerElem = document.getElementById("qris-timer");
   const btnSimulate = document.getElementById("btn-simulate-pay");
 
   if (!timerElem || !btnSimulate) return;
 
-  // Hitung Mundur Timer QRIS
   const countdownInterval = setInterval(() => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
@@ -39,24 +48,48 @@ function initPaymentStep() {
 
     if (timeLeft <= 0) {
       clearInterval(countdownInterval);
-      alert("Masa berlaku QRIS telah habis. Halaman akan dimuat ulang.");
-      window.location.reload();
+      showModalNotice(
+        "Waktu Habis",
+        "Masa berlaku QRIS telah habis. Halaman akan dimuat ulang.",
+        "warning",
+        () => {
+          window.location.reload();
+        },
+      );
     }
     timeLeft--;
   }, 1000);
 
-  // Event Listener Tombol Simulasi Pembayaran
+  // Ganti alert bawaan browser dengan Custom Modal Notification
   btnSimulate.addEventListener("click", () => {
     clearInterval(countdownInterval);
     playSuccessSound();
-    alert("Pembayaran Terkonfirmasi! Menuju ke Pemilihan Frame...");
 
-    // Nanti di sini kita panggil fungsi pindah ke Halaman 2 (Frame Selection)
-    if (typeof goToStep === "function") {
-      goToStep(2);
-    }
+    showModalNotice(
+      "Pembayaran Berhasil!",
+      "Pembayaran terkonfirmasi. Menuju ke halaman pemilihan frame...",
+      "success",
+      () => {
+        if (typeof goToStep === "function") {
+          goToStep(2);
+        }
+      },
+    );
   });
+
+  supabaseClient
+    .channel("realtime_config")
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "app_config" },
+      (payload) => {
+        console.log("Perubahan data terdeteksi di Supabase!", payload.new);
+        if (priceElem)
+          priceElem.textContent = `Rp ${Number(payload.new.price).toLocaleString("id-ID")}`;
+        if (qrisImgElem) qrisImgElem.src = payload.new.qris_image_url;
+      },
+    )
+    .subscribe();
 }
 
-// Jalankan saat script dimuat
 document.addEventListener("DOMContentLoaded", initPaymentStep);

@@ -1,0 +1,8 @@
+supabase databse password
+Ts8rbGWjaPbaP4q4
+
+anon-key public
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoZnllbmx0dG15cG93bHNzeHVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNzE0MjIsImV4cCI6MjEwODY0NzQyMn0.8pIo6GiQndHPStIETwJKChYi7Rs0O0U6qaZJ-SVuxHg
+
+publishable key
+sb_publishable_bQvgfIsz5msS7PTyUoRRiQ_jzB79BE4
