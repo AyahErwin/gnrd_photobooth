@@ -34,7 +34,7 @@
           id="admin-qris-preview"
           src=""
           alt="QRIS Aktif"
-          class="w-24 h-24 object-contain bg-white p-2 rounded-xl"
+          class="w-20 h-20 object-contain bg-white p-2 rounded-xl"
         />
         <div>
           <p class="text-xs text-slate-400 uppercase font-bold">
@@ -52,7 +52,25 @@
         </div>
       </div>
 
-      <form id="form-admin-config" class="space-y-5 text-sm">
+      <form id="form-admin-config" class="space-y-4 text-sm">
+        <!-- Upload Video Promo Baru -->
+        <div>
+          <label class="block font-bold mb-1 text-slate-300"
+            >Upload Video Promo Standby (.mp4)</label
+          >
+          <input
+            type="file"
+            id="input-video-file"
+            accept="video/mp4,video/*"
+            class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-slate-300 text-xs focus:outline-none focus:border-purple-500"
+          />
+          <p class="text-[11px] text-slate-400 mt-1">
+            Video yang akan diputar berulang-ulang saat kiosk dalam kondisi
+            idle.
+          </p>
+        </div>
+
+        <!-- Upload QRIS Baru -->
         <div>
           <label class="block font-bold mb-1 text-slate-300"
             >Upload Gambar QRIS Baru</label
@@ -63,11 +81,9 @@
             accept="image/*"
             class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-slate-300 text-xs focus:outline-none focus:border-purple-500"
           />
-          <p class="text-[11px] text-slate-400 mt-1">
-            File akan otomatis di-upload ke Supabase Cloud Storage.
-          </p>
         </div>
 
+        <!-- Ubah Harga -->
         <div>
           <label class="block font-bold mb-1 text-slate-300"
             >Harga Paket Photobooth (Rp)</label
@@ -80,6 +96,7 @@
           />
         </div>
 
+        <!-- Ubah Timer -->
         <div>
           <label class="block font-bold mb-1 text-slate-300"
             >Durasi Timer QRIS (Detik)</label
@@ -110,7 +127,6 @@
       </form>
     </div>
 
-    <!-- ==================== GLOBAL NOTIFICATION MODAL ==================== -->
     <div
       id="global-modal-notice"
       class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
@@ -138,7 +154,6 @@
       </div>
     </div>
 
-    <!-- JavaScript Modular Scripts -->
     <script src="js/app.js"></script>
     <script src="js/config.js"></script>
     <script>
@@ -153,7 +168,7 @@
 
         priceInput.value = config.price;
         timeInput.value = config.qrisTime;
-        qrisPreview.src = config.qrisImage;
+        if (config.qrisImage) qrisPreview.src = config.qrisImage;
         pricePreview.textContent = `Rp ${Number(config.price).toLocaleString("id-ID")}`;
         timePreview.textContent = `Timer: ${config.qrisTime} Detik`;
 
@@ -165,17 +180,40 @@
           btnSave.innerHTML =
             '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
 
-          const fileInput = document.getElementById("input-qris-file");
-          let newImageUrl = null;
+          const qrisFileInput = document.getElementById("input-qris-file");
+          const videoFileInput = document.getElementById("input-video-file");
 
-          if (fileInput.files && fileInput.files[0]) {
-            newImageUrl = await uploadQrisImageToStorage(fileInput.files[0]);
+          let newQrisUrl = null;
+          let newVideoUrl = null;
+
+          // Jika ada video yang dipilih
+          if (videoFileInput.files && videoFileInput.files[0]) {
+            newVideoUrl = await uploadVideoToStorage(videoFileInput.files[0]);
+            // Jika upload gagal, hentikan proses penyimpanan
+            if (!newVideoUrl) {
+              btnSave.disabled = false;
+              btnSave.innerHTML =
+                '<i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase';
+              return;
+            }
+          }
+
+          // Jika ada gambar QRIS yang dipilih
+          if (qrisFileInput.files && qrisFileInput.files[0]) {
+            newQrisUrl = await uploadQrisImageToStorage(qrisFileInput.files[0]);
+            if (!newQrisUrl) {
+              btnSave.disabled = false;
+              btnSave.innerHTML =
+                '<i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase';
+              return;
+            }
           }
 
           const success = await saveAppConfigToDB(
             parseInt(priceInput.value),
             parseInt(timeInput.value),
-            newImageUrl,
+            newQrisUrl,
+            newVideoUrl,
           );
 
           if (success) {

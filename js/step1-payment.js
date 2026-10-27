@@ -21,75 +21,145 @@ function playSuccessSound() {
   }
 }
 
-async function initPaymentStep() {
-  const currentConfig = await getAppConfigFromDB();
+// Memuat dan Memutar Video Promo Standby
+function loadPromoVideo(videoUrl) {
+  const videoPlayer = document.getElementById("promo-video-player");
+  const videoSource = document.getElementById("promo-video-source");
+  if (!videoPlayer) return;
 
-  const priceElem = document.getElementById("qris-price-display");
-  if (priceElem) {
-    priceElem.textContent = `Rp ${Number(currentConfig.price).toLocaleString("id-ID")}`;
+  const targetUrl =
+    videoUrl ||
+    "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+
+  videoPlayer.muted = true;
+  videoPlayer.defaultMuted = true;
+
+  if (videoSource) videoSource.src = targetUrl;
+  videoPlayer.src = targetUrl;
+  videoPlayer.load();
+
+  const playPromise = videoPlayer.play();
+  if (playPromise !== undefined) {
+    playPromise.catch((err) => {
+      console.log("Autoplay tercegah browser, menunggu sentuhan:", err);
+      const handleTouch = () => {
+        videoPlayer.play();
+        document.removeEventListener("click", handleTouch);
+      };
+      document.addEventListener("click", handleTouch);
+    });
   }
+}
 
-  const qrisImgElem = document.getElementById("qris-image-display");
-  if (qrisImgElem) {
-    qrisImgElem.src = currentConfig.qrisImage;
-  }
-
-  let timeLeft = parseInt(currentConfig.qrisTime) || 300;
+// Timer QRIS
+function startQrisTimer(durationSeconds) {
+  let timeLeft = parseInt(durationSeconds) || 300;
   const timerElem = document.getElementById("qris-timer");
-  const btnSimulate = document.getElementById("btn-simulate-pay");
+  if (!timerElem) return;
 
-  if (!timerElem || !btnSimulate) return;
+  if (window.qrisCountdownInterval) clearInterval(window.qrisCountdownInterval);
 
-  const countdownInterval = setInterval(() => {
+  window.qrisCountdownInterval = setInterval(() => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
 
     timerElem.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
     if (timeLeft <= 0) {
-      clearInterval(countdownInterval);
+      clearInterval(window.qrisCountdownInterval);
       showModalNotice(
         "Waktu Habis",
-        "Masa berlaku QRIS telah habis. Halaman akan dimuat ulang.",
+        "Masa berlaku QRIS telah habis. Kembali ke layar utama.",
         "warning",
         () => {
-          window.location.reload();
+          if (typeof goToStep === "function") goToStep(0);
         },
       );
     }
     timeLeft--;
   }, 1000);
+}
 
-  // Ganti alert bawaan browser dengan Custom Modal Notification
-  btnSimulate.addEventListener("click", () => {
-    clearInterval(countdownInterval);
-    playSuccessSound();
+// Inisialisasi Utama Halaman Standby & QRIS
+async function initPaymentStep() {
+  // 1. Hubungkan Tombol MULAI SESI FOTO secara langsung
+  const btnStart = document.getElementById("btn-start-kiosk");
+  if (btnStart) {
+    btnStart.onclick = () => {
+      if (typeof goToStep === "function") goToStep(1);
+      if (window.activeQrisTime) startQrisTimer(window.activeQrisTime);
+    };
+  }
 
-    showModalNotice(
-      "Pembayaran Berhasil!",
-      "Pembayaran terkonfirmasi. Menuju ke halaman pemilihan frame...",
-      "success",
-      () => {
-        if (typeof goToStep === "function") {
-          goToStep(2);
-        }
-      },
-    );
-  });
+  // 2. Ambil data Konfigurasi dari Supabase dengan aman
+  let currentConfig = {
+    price: 25000,
+    qrisTime: 300,
+    qrisImage:
+      "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GNRD_PHOTOBOOTH_PAYMENT_DEMO",
+    videoUrl:
+      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  };
 
-  supabaseClient
-    .channel("realtime_config")
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "app_config" },
-      (payload) => {
-        console.log("Perubahan data terdeteksi di Supabase!", payload.new);
-        if (priceElem)
-          priceElem.textContent = `Rp ${Number(payload.new.price).toLocaleString("id-ID")}`;
-        if (qrisImgElem) qrisImgElem.src = payload.new.qris_image_url;
-      },
-    )
-    .subscribe();
+  try {
+    if (typeof getAppConfigFromDB === "function") {
+      const dbConfig = await getAppConfigFromDB();
+      if (dbConfig) currentConfig = { ...currentConfig, ...dbConfig };
+    }
+  } catch (err) {
+    console.warn("Memakai konfigurasi standar:", err);
+  }
+
+  window.activeQrisTime = currentConfig.qrisTime;
+
+  // 3. Putar Video
+  loadPromoVideo(currentConfig.videoUrl);
+
+  // 4. Set Tampilan Harga & QRIS
+  const priceElem = document.getElementById("qris-price-display");
+  if (priceElem)
+    priceElem.textContent = `Rp ${Number(currentConfig.price).toLocaleString("id-ID")}`;
+
+  const qrisImgElem = document.getElementById("qris-image-display");
+  if (qrisImgElem) qrisImgElem.src = currentConfig.qrisImage;
+
+  // 5. Setup Tombol Simulasi Bayar
+  const btnSimulate = document.getElementById("btn-simulate-pay");
+  if (btnSimulate) {
+    btnSimulate.onclick = () => {
+      if (window.qrisCountdownInterval)
+        clearInterval(window.qrisCountdownInterval);
+      playSuccessSound();
+      showModalNotice(
+        "Pembayaran Berhasil!",
+        "Menuju ke pemilihan frame...",
+        "success",
+        () => {
+          if (typeof goToStep === "function") goToStep(2);
+        },
+      );
+    };
+  }
+
+  // 6. Realtime Listener
+  if (typeof supabaseClient !== "undefined") {
+    supabaseClient
+      .channel("realtime_config")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "app_config" },
+        (payload) => {
+          if (priceElem && payload.new.price)
+            priceElem.textContent = `Rp ${Number(payload.new.price).toLocaleString("id-ID")}`;
+          if (qrisImgElem && payload.new.qris_image_url)
+            qrisImgElem.src = payload.new.qris_image_url;
+          if (payload.new.video_url) loadPromoVideo(payload.new.video_url);
+          if (payload.new.qris_time)
+            window.activeQrisTime = payload.new.qris_time;
+        },
+      )
+      .subscribe();
+  }
 }
 
 document.addEventListener("DOMContentLoaded", initPaymentStep);

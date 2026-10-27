@@ -1,4 +1,4 @@
-// 1. KUNCI API SUPABASE AKUN KAMU
+// 1. KUNCI API SUPABASE
 const SUPABASE_URL = "https://rhfyenlttmypowlssxuh.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bQvgfIsz5msS7PTyUoRRiQ_jzB79BE4";
 
@@ -20,6 +20,9 @@ async function getAppConfigFromDB() {
       price: data.price,
       qrisTime: data.qris_time,
       qrisImage: data.qris_image_url,
+      videoUrl:
+        data.video_url ||
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
     };
   } catch (err) {
     console.error("Gagal mengambil konfigurasi Supabase:", err.message);
@@ -28,11 +31,44 @@ async function getAppConfigFromDB() {
       qrisTime: 300,
       qrisImage:
         "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GNRD_PHOTOBOOTH_PAYMENT_DEMO",
+      videoUrl:
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
     };
   }
 }
 
-// 4. UPLOAD GAMBAR QRIS KE SUPABASE STORAGE
+// 4. UPLOAD VIDEO PROMO KE SUPABASE STORAGE (BUCKET: kiosk-videos)
+async function uploadVideoToStorage(file) {
+  try {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `promo_${Date.now()}.${fileExt}`;
+
+    // Upload langsung di root bucket kiosk-videos
+    const { error: uploadError } = await supabaseClient.storage
+      .from("kiosk-videos")
+      .upload(fileName, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabaseClient.storage
+      .from("kiosk-videos")
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  } catch (err) {
+    console.error("Gagal upload video:", err.message);
+    if (typeof showModalNotice === "function") {
+      showModalNotice(
+        "Upload Gagal",
+        "Gagal upload file video: " + err.message,
+        "error",
+      );
+    }
+    return null;
+  }
+}
+
+// 5. UPLOAD GAMBAR QRIS KE SUPABASE STORAGE (BUCKET: qris-images)
 async function uploadQrisImageToStorage(file) {
   try {
     const fileExt = file.name.split(".").pop();
@@ -63,8 +99,8 @@ async function uploadQrisImageToStorage(file) {
   }
 }
 
-// 5. SIMPAN DATA KE TABEL APP_CONFIG (DIPERBARUI DENGAN MODAL)
-async function saveAppConfigToDB(newPrice, newTime, imageUrl) {
+// 6. SIMPAN CONFIG KE TABEL APP_CONFIG
+async function saveAppConfigToDB(newPrice, newTime, imageUrl, videoUrl) {
   try {
     const updateData = {
       price: newPrice,
@@ -72,9 +108,8 @@ async function saveAppConfigToDB(newPrice, newTime, imageUrl) {
       updated_at: new Date(),
     };
 
-    if (imageUrl) {
-      updateData.qris_image_url = imageUrl;
-    }
+    if (imageUrl) updateData.qris_image_url = imageUrl;
+    if (videoUrl) updateData.video_url = videoUrl;
 
     const { error } = await supabaseClient
       .from("app_config")
@@ -83,7 +118,6 @@ async function saveAppConfigToDB(newPrice, newTime, imageUrl) {
 
     if (error) throw error;
 
-    // Tampilkan Custom Modal menggantikan alert() bawaan
     return new Promise((resolve) => {
       if (typeof showModalNotice === "function") {
         showModalNotice(
