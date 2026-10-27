@@ -67,3 +67,66 @@ function goToStep(stepNumber) {
     }
   }
 }
+// Fungsi Toggle Fullscreen & Normal Screen
+function toggleFullscreen() {
+  const icon = document.getElementById("fullscreen-icon");
+
+  if (
+    !document.fullscreenElement &&
+    !document.webkitFullscreenElement &&
+    !document.msFullscreenElement
+  ) {
+    // Masuk ke Mode Fullscreen
+    const docElm = document.documentElement;
+    if (docElm.requestFullscreen) {
+      docElm.requestFullscreen();
+    } else if (docElm.webkitRequestFullscreen) {
+      /* Safari / iOS */
+      docElm.webkitRequestFullscreen();
+    } else if (docElm.msRequestFullscreen) {
+      /* IE/Edge */
+      docElm.msRequestFullscreen();
+    }
+
+    if (icon) {
+      icon.className = "fa-solid fa-compress text-lg";
+    }
+  } else {
+    // Keluar dari Mode Fullscreen (Kembali Normal)
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+
+    if (icon) {
+      icon.className = "fa-solid fa-expand text-lg";
+    }
+  }
+}
+
+// Deteksi perubahan status Fullscreen (misal saat pengguna tekan ESC)
+document.addEventListener("fullscreenchange", () => {
+  const icon = document.getElementById("fullscreen-icon");
+  if (!icon) return;
+
+  if (document.fullscreenElement) {
+    icon.className = "fa-solid fa-compress text-lg";
+  } else {
+    icon.className = "fa-solid fa-expand text-lg";
+  }
+});
+
+// Otomatis minta Fullscreen pada klik/sentuhan pertama di layar
+document.addEventListener(
+  "click",
+  () => {
+    if (!document.fullscreenElement) {
+      // Aktifkan jika aplikasi baru pertama dibuka dan diklik
+      // toggleFullscreen(); // Bebas diaktifkan jika ingin otomatis full saat tombol apa saja diklik
+    }
+  },
+  { once: true },
+);
