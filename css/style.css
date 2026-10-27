@@ -1,0 +1,17 @@
+/* Custom Styles & Animation untuk Photobooth Kiosk */
+
+@keyframes scan {
+  0% {
+    top: 0%;
+  }
+  50% {
+    top: 95%;
+  }
+  100% {
+    top: 0%;
+  }
+}
+
+.scan-line {
+  animation: scan 2.5s infinite ease-in-out;
+}
