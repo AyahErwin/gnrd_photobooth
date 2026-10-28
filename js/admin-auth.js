@@ -24,9 +24,14 @@ window.adminAuthReady = (async function protectAdminRoute() {
     return null;
   }
 
-  if (!profile || !["owner", "hq_admin", "kiosk_admin"].includes(profile.role)) {
+  if (!profile || !["owner", "hq_admin", "kiosk_admin", "operator"].includes(profile.role)) {
     await supabaseClient.auth.signOut();
     window.location.replace("staff-login.html");
+    return null;
+  }
+
+  if (profile.role === "operator") {
+    window.location.replace("index.html");
     return null;
   }
 
@@ -45,15 +50,16 @@ window.adminAuthReady = (async function protectAdminRoute() {
 
   const user = sessionData.session.user;
   const roleLabels = {
-    owner: "Owner Kantor Pusat",
-    hq_admin: "Admin Kantor Pusat",
+    owner: "Owner",
+    hq_admin: "Admin Pusat",
     kiosk_admin: "Admin Kios",
+    operator: "Operator",
   };
   const container = document.getElementById("staff-session-bar");
   if (container) {
     const identity = document.createElement("span");
     identity.className = "text-sm text-gray-600";
-    identity.textContent = `${user.email || "Staf"} · ${roleLabels[profile.role]}`;
+    identity.textContent = `${user.email || "Staf"} | ${roleLabels[profile.role]}`;
 
     const logoutButton = document.createElement("button");
     logoutButton.type = "button";

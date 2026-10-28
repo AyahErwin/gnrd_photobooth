@@ -35,7 +35,7 @@ async function initializeStaffUsers() {
   }
 
   function updateKioskField() {
-    const needsKiosk = roleInput.value === "kiosk_admin";
+    const needsKiosk = ["kiosk_admin", "operator"].includes(roleInput.value);
     kioskInput.required = needsKiosk;
     kioskInput.disabled = !needsKiosk;
     kioskInput.parentElement.classList.toggle("hidden", !needsKiosk);
@@ -70,7 +70,12 @@ async function initializeStaffUsers() {
 
     users.forEach((user) => {
       const row = document.createElement("tr");
-      [user.email, user.role === "hq_admin" ? "Admin Kantor Pusat" : "Admin Kios", user.kioskName || "-"].forEach((value) => {
+      const roleLabels = {
+        hq_admin: "Admin Pusat",
+        kiosk_admin: "Admin Kios",
+        operator: "Operator",
+      };
+      [user.email, roleLabels[user.role] || user.role, user.kioskName || "-"].forEach((value) => {
         const cell = document.createElement("td");
         cell.className = "p-3";
         cell.textContent = value;
@@ -145,7 +150,9 @@ async function initializeStaffUsers() {
         email: emailInput.value.trim(),
         password: passwordInput.value || undefined,
         role: roleInput.value,
-        kioskId: roleInput.value === "kiosk_admin" ? kioskInput.value : null,
+        kioskId: ["kiosk_admin", "operator"].includes(roleInput.value)
+          ? kioskInput.value
+          : null,
       });
       resetForm();
       await loadUsers();

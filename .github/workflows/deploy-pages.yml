@@ -1,9 +1,6 @@
 name: Deploy photobooth frontend
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:

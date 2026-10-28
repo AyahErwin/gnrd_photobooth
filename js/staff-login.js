@@ -18,14 +18,43 @@ staffLoginForm.addEventListener("submit", async (event) => {
 
     const { data: profile, error: profileError } = await supabaseClient
       .from("staff_profiles")
-      .select("role")
+      .select("role, kiosk_id")
       .eq("user_id", data.user.id)
       .maybeSingle();
 
     if (profileError) throw profileError;
-    if (!profile || !["owner", "hq_admin", "kiosk_admin"].includes(profile.role)) {
+    if (!profile || !["owner", "hq_admin", "kiosk_admin", "operator"].includes(profile.role)) {
       await supabaseClient.auth.signOut();
       throw new Error("Akun ini tidak memiliki akses admin.");
+    }
+
+    if (profile.role === "operator") {
+      const { data: kioskData, error: kioskError } =
+        await supabaseClient.functions.invoke("kiosk-revenue", {
+          body: { action: "operator_login" },
+        });
+      if (kioskError) {
+        const response = kioskError.context;
+        if (response && typeof response.json === "function") {
+          const errorBody = await response.clone().json().catch(() => null);
+          if (errorBody?.error) throw new Error(errorBody.error);
+        }
+        throw kioskError;
+      }
+      if (!kioskData?.success || !kioskData.kiosk || !kioskData.sessionToken) {
+        throw new Error("Sesi operasional kios belum berhasil dibuat.");
+      }
+
+      localStorage.setItem(
+        "gnrd_active_kiosk",
+        JSON.stringify({
+          ...kioskData.kiosk,
+          sessionToken: kioskData.sessionToken,
+          operatorSession: true,
+        }),
+      );
+      window.location.replace("index.html");
+      return;
     }
 
     window.location.replace("admin.html");

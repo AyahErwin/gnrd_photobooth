@@ -97,6 +97,54 @@ Deno.serve(async (request) => {
       .maybeSingle();
   }
 
+  async function createKioskSession(kiosk: {
+    id: string;
+    kiosk_code: string;
+    kiosk_name: string;
+    package_type: string | null;
+    location: string | null;
+  }) {
+    const sessionToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map((value) => value.toString(16).padStart(2, "0"))
+      .join("");
+    const tokenHash = await hashToken(sessionToken);
+    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+
+    const [{ error: activateError }, { error: sessionError }] = await Promise.all([
+      serviceClient.from("kiosks").update({ is_active: true }).eq("id", kiosk.id),
+      serviceClient.from("kiosk_sessions").insert({
+        token_hash: tokenHash,
+        kiosk_id: kiosk.id,
+        expires_at: expiresAt,
+      }),
+    ]);
+
+    if (activateError || sessionError) {
+      console.error("Gagal membuat sesi login kiosk:", activateError || sessionError);
+      return respond({ error: "Sesi login belum berhasil dibuat. Silakan coba lagi." }, 500);
+    }
+
+    const { error: cleanupError } = await serviceClient
+      .from("kiosk_sessions")
+      .delete()
+      .lt("expires_at", new Date().toISOString());
+    if (cleanupError) {
+      console.error("Gagal membersihkan sesi kiosk kedaluwarsa:", cleanupError);
+    }
+
+    return respond({
+      success: true,
+      sessionToken,
+      kiosk: {
+        id: kiosk.id,
+        kiosk_code: kiosk.kiosk_code,
+        kiosk_name: kiosk.kiosk_name,
+        package_type: kiosk.package_type,
+        location: kiosk.location,
+      },
+    });
+  }
+
   if (body.action === "login") {
     if (!body.kioskCode || !body.kioskPassword) {
       return respond({ error: "Masukkan kode dan kata sandi kios." }, 400);
@@ -116,45 +164,33 @@ Deno.serve(async (request) => {
       return respond({ success: false });
     }
 
-    const sessionToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-      .map((value) => value.toString(16).padStart(2, "0"))
-      .join("");
-    const tokenHash = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(sessionToken),
-    );
-    const sessionTokenHash = Array.from(new Uint8Array(tokenHash))
-      .map((value) => value.toString(16).padStart(2, "0"))
-      .join("");
-    const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+    return createKioskSession(kiosk);
+  }
 
-    const [{ error: activateError }, { error: sessionError }] = await Promise.all([
-      serviceClient.from("kiosks").update({ is_active: true }).eq("id", kiosk.id),
-      serviceClient.from("kiosk_sessions").insert({
-        token_hash: sessionTokenHash,
-        kiosk_id: kiosk.id,
-        expires_at: expiresAt,
-      }),
-    ]);
-
-    if (activateError || sessionError) {
-      console.error("Gagal membuat sesi login kiosk:", activateError || sessionError);
-      return respond({ error: "Sesi login belum berhasil dibuat. Silakan coba lagi." }, 500);
+  if (body.action === "operator_login") {
+    const { profile, error: profileError, unauthorized } = await getStaffProfile();
+    if (unauthorized) {
+      return respond({ error: "Sesi login staf tidak valid. Silakan masuk kembali." }, 401);
+    }
+    if (profileError) {
+      console.error("Gagal memeriksa hak akses Operator:", profileError);
+      return respond({ error: "Hak akses Operator belum bisa diperiksa." }, 500);
+    }
+    if (profile?.role !== "operator" || !profile.kiosk_id) {
+      return respond({ error: "Akun ini tidak memiliki akses operasional kios." }, 403);
     }
 
-    await serviceClient.from("kiosk_sessions").delete().lt("expires_at", new Date().toISOString());
-
-    return respond({
-      success: true,
-      sessionToken,
-      kiosk: {
-        id: kiosk.id,
-        kiosk_code: kiosk.kiosk_code,
-        kiosk_name: kiosk.kiosk_name,
-        package_type: kiosk.package_type,
-        location: kiosk.location,
-      },
-    });
+    const { data: kiosk, error: kioskError } = await serviceClient
+      .from("kiosks")
+      .select("id, kiosk_code, kiosk_name, package_type, location")
+      .eq("id", profile.kiosk_id)
+      .maybeSingle();
+    if (kioskError) {
+      console.error("Gagal memuat kios untuk akun Operator:", kioskError);
+      return respond({ error: "Data kios belum bisa dimuat. Silakan coba lagi." }, 500);
+    }
+    if (!kiosk) return respond({ error: "Kios untuk akun Operator tidak ditemukan." }, 404);
+    return createKioskSession(kiosk);
   }
 
   if (body.action === "record") {

@@ -2,9 +2,25 @@
 // KONFIGURASI SUPABASE & HELPER DATABASE / STORAGE
 // ============================================================
 
-const SUPABASE_URL = "https://rhfyenlttmypowlssxuh.supabase.co";
+const localSupabaseConfig = window.GNRD_SUPABASE_CONFIG;
+const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(
+  window.location.hostname,
+);
+if (
+  isLocalHost &&
+  (!localSupabaseConfig?.url ||
+    !localSupabaseConfig?.anonKey ||
+    localSupabaseConfig.anonKey === "PASTE_LOCAL_ANON_KEY_HERE")
+) {
+  throw new Error(
+    "Isi js/config.local.js dengan URL dan anon key Supabase lokal terlebih dahulu.",
+  );
+}
+
+const SUPABASE_URL =
+  localSupabaseConfig?.url || "https://rhfyenlttmypowlssxuh.supabase.co";
 const SUPABASE_ANON_KEY =
-  "sb_publishable_bQvgfIsz5msS7PTyUoRRiQ_jzB79BE4";
+  localSupabaseConfig?.anonKey || "sb_publishable_bQvgfIsz5msS7PTyUoRRiQ_jzB79BE4";
 const supabaseClient = supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY,

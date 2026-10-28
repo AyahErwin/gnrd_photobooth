@@ -58,7 +58,7 @@ Deno.serve(async (request) => {
     return respond({ error: "Hak akses belum bisa diperiksa." }, 500);
   }
   if (!callerProfile || !["owner", "hq_admin"].includes(callerProfile.role)) {
-    return respond({ error: "Hanya Owner/Admin Kantor Pusat yang dapat mengelola akun staf." }, 403);
+    return respond({ error: "Hanya Owner/Admin Pusat yang dapat mengelola akun staf." }, 403);
   }
 
   let body: {
@@ -77,13 +77,14 @@ Deno.serve(async (request) => {
 
   const isOwner = callerProfile.role === "owner";
   const isAllowedRole = (role: string) =>
-    role === "kiosk_admin" || (isOwner && role === "hq_admin");
+    ["kiosk_admin", "operator"].includes(role) || (isOwner && role === "hq_admin");
+  const isLocalRole = (role: string) => ["kiosk_admin", "operator"].includes(role);
 
   if (body.action === "list") {
     const { data: profiles, error: profilesError } = await serviceClient
       .from("staff_profiles")
       .select("user_id, role, kiosk_id")
-      .in("role", isOwner ? ["hq_admin", "kiosk_admin"] : ["kiosk_admin"]);
+      .in("role", isOwner ? ["hq_admin", "kiosk_admin", "operator"] : ["kiosk_admin", "operator"]);
     if (profilesError) {
       console.error("Gagal mengambil daftar akun staf:", profilesError);
       return respond({ error: "Daftar akun belum bisa dimuat." }, 500);
@@ -128,8 +129,8 @@ Deno.serve(async (request) => {
   if (!body.role || !isAllowedRole(body.role)) {
     return respond({ error: "Role yang dipilih tidak dapat diberikan oleh akun Anda." }, 403);
   }
-  if (body.role === "kiosk_admin" && !body.kioskId) {
-    return respond({ error: "Pilih kios untuk akun Admin Kios." }, 400);
+  if (isLocalRole(body.role) && !body.kioskId) {
+    return respond({ error: "Pilih kios untuk akun Admin Kios atau Operator." }, 400);
   }
   if (body.role === "hq_admin" && body.kioskId) {
     return respond({ error: "Admin Kantor Pusat tidak boleh dibatasi ke satu kios." }, 400);
@@ -184,8 +185,8 @@ Deno.serve(async (request) => {
   if (target.role === "owner") {
     return respond({ error: "Akun Owner utama tidak dapat diubah dari halaman ini." }, 403);
   }
-  if (!isOwner && target.role !== "kiosk_admin") {
-    return respond({ error: "Admin Kantor Pusat hanya dapat mengubah akun Admin Kios." }, 403);
+  if (!isOwner && !isLocalRole(target.role)) {
+    return respond({ error: "Admin Pusat hanya dapat mengubah akun Admin Kios atau Operator." }, 403);
   }
   if (body.userId === callerData.user.id && body.role !== callerProfile.role) {
     return respond({ error: "Anda tidak dapat mengubah role akun yang sedang digunakan." }, 400);

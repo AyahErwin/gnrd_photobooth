@@ -1,3 +1,30 @@
+project_id = "gnrd-photobooth"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:8000"
+additional_redirect_urls = ["http://localhost:8000"]
+enable_signup = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
 [functions.kiosk-revenue]
 verify_jwt = false
 
