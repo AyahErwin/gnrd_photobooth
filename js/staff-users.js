@@ -35,7 +35,7 @@ async function initializeStaffUsers() {
   }
 
   function updateKioskField() {
-    const needsKiosk = ["kiosk_admin", "operator"].includes(roleInput.value);
+    const needsKiosk = roleInput.value === "kiosk_admin";
     kioskInput.required = needsKiosk;
     kioskInput.disabled = !needsKiosk;
     kioskInput.parentElement.classList.toggle("hidden", !needsKiosk);
@@ -73,7 +73,6 @@ async function initializeStaffUsers() {
       const roleLabels = {
         hq_admin: "Admin Pusat",
         kiosk_admin: "Admin Kios",
-        operator: "Operator",
       };
       [user.email, roleLabels[user.role] || user.role, user.kioskName || "-"].forEach((value) => {
         const cell = document.createElement("td");
@@ -150,9 +149,7 @@ async function initializeStaffUsers() {
         email: emailInput.value.trim(),
         password: passwordInput.value || undefined,
         role: roleInput.value,
-        kioskId: ["kiosk_admin", "operator"].includes(roleInput.value)
-          ? kioskInput.value
-          : null,
+        kioskId: roleInput.value === "kiosk_admin" ? kioskInput.value : null,
       });
       resetForm();
       await loadUsers();

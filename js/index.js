@@ -27,18 +27,6 @@ window.handleLogoutKiosk = async () => {
       }
 
       localStorage.removeItem("gnrd_active_kiosk");
-      if (activeKiosk.operatorSession) {
-        const { error: signOutError } = await supabaseClient.auth.signOut();
-        if (signOutError) {
-          console.error("Gagal keluar dari akun Operator:", signOutError);
-          showModalNotice(
-            "Login Operator Belum Berakhir",
-            "Sesi kios telah berakhir, tetapi akun Operator belum berhasil keluar. Silakan coba lagi.",
-            "error",
-          );
-          return;
-        }
-      }
       window.location.replace("login.html");
     },
     "Ya, Keluar",

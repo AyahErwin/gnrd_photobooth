@@ -30,7 +30,8 @@ Persyaratan: Docker Desktop, Node.js, dan Python terpasang.
    ```
 
 8. Login melalui `staff-login.html`, buat kios di menu **Kelola Data Kios**, lalu
-   buat akun staf melalui menu **Kelola Akun Staf**.
+   buat akun Admin Kios melalui menu **Kelola Akun Staf**. Akses operasional
+   photobooth menggunakan kode dan password pada data kios.
 
 Gunakan `npx supabase stop` untuk menghentikan database lokal. Jangan jalankan
 `npx supabase db reset` jika ingin mempertahankan data lokal.
@@ -42,7 +43,9 @@ Gunakan `npx supabase stop` untuk menghentikan database lokal. Jangan jalankan
 | Owner | Akses global, termasuk mengelola Admin Pusat |
 | Admin Pusat | Konfigurasi global, seluruh kios, laporan, dan akun lokal |
 | Admin Kios | Hanya mengubah harga dan durasi QRIS kiosnya |
-| Operator | Menjalankan sesi photobooth kios yang ditetapkan |
+
+Operator tidak memiliki akun staf terpisah. Akses menjalankan photobooth memakai
+kode dan password outlet/kios.
 
 Perubahan dan migrasi database tersimpan di Git. Deployment Pages hanya berjalan
 secara manual agar push ke GitHub tidak menerbitkan aplikasi sebelum siap.

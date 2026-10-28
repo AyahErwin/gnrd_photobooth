@@ -40,6 +40,14 @@
         <i class="fa-solid fa-store"></i> Kelola Data Kios
       </a>
 
+      <a
+        data-head-office-only
+        href="staff-users.html"
+        class="w-full py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-700 transition-all mb-6"
+      >
+        <i class="fa-solid fa-users"></i> Kelola Akun Staf Kios
+      </a>
+
       <div
         class="admin-ios-summary mb-6 p-4 rounded-2xl flex items-center gap-4"
       >
@@ -157,16 +165,6 @@
           </button>
         </div>
       </form>
-
-      <div id="kiosk-revenue-container" class="mt-6"></div>
-
-      <a
-        data-head-office-only
-        href="staff-users.html"
-        class="mt-4 w-full py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-700 transition-all"
-      >
-        <i class="fa-solid fa-users"></i> Kelola Akun Staf Kios
-      </a>
     </div>
 
     <!-- Container Komponen Modal Pop-Up Notifikasi Global -->
@@ -182,16 +180,9 @@
         await window.adminAuthReady;
         if (!window.currentStaffProfile) return;
         try {
-          const [modalRes, revenueRes] = await Promise.all([
-            fetch("components/modal-notice.html"),
-            fetch("components/kiosk-revenue.html"),
-          ]);
-          if (!modalRes.ok || !revenueRes.ok) {
-            throw new Error("Komponen halaman admin gagal dimuat.");
-          }
+          const modalRes = await fetch("components/modal-notice.html");
+          if (!modalRes.ok) throw new Error("Komponen modal admin gagal dimuat.");
           document.getElementById("modal-container").innerHTML = await modalRes.text();
-          document.getElementById("kiosk-revenue-container").innerHTML =
-            await revenueRes.text();
 
           const script = document.createElement("script");
           script.src = "js/admin.js";
@@ -200,9 +191,6 @@
             script.onerror = () => reject(new Error("js/admin.js gagal dimuat."));
             document.body.appendChild(script);
           });
-          const revenueScript = document.createElement("script");
-          revenueScript.src = "js/kiosk-revenue.js";
-          document.body.appendChild(revenueScript);
         } catch (e) {
           console.error("Gagal memuat komponen:", e);
         }

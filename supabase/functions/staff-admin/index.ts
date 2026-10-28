@@ -77,14 +77,14 @@ Deno.serve(async (request) => {
 
   const isOwner = callerProfile.role === "owner";
   const isAllowedRole = (role: string) =>
-    ["kiosk_admin", "operator"].includes(role) || (isOwner && role === "hq_admin");
-  const isLocalRole = (role: string) => ["kiosk_admin", "operator"].includes(role);
+    role === "kiosk_admin" || (isOwner && role === "hq_admin");
+  const isLocalRole = (role: string) => role === "kiosk_admin";
 
   if (body.action === "list") {
     const { data: profiles, error: profilesError } = await serviceClient
       .from("staff_profiles")
       .select("user_id, role, kiosk_id")
-      .in("role", isOwner ? ["hq_admin", "kiosk_admin", "operator"] : ["kiosk_admin", "operator"]);
+      .in("role", isOwner ? ["hq_admin", "kiosk_admin"] : ["kiosk_admin"]);
     if (profilesError) {
       console.error("Gagal mengambil daftar akun staf:", profilesError);
       return respond({ error: "Daftar akun belum bisa dimuat." }, 500);
@@ -130,7 +130,7 @@ Deno.serve(async (request) => {
     return respond({ error: "Role yang dipilih tidak dapat diberikan oleh akun Anda." }, 403);
   }
   if (isLocalRole(body.role) && !body.kioskId) {
-    return respond({ error: "Pilih kios untuk akun Admin Kios atau Operator." }, 400);
+    return respond({ error: "Pilih kios untuk akun Admin Kios." }, 400);
   }
   if (body.role === "hq_admin" && body.kioskId) {
     return respond({ error: "Admin Kantor Pusat tidak boleh dibatasi ke satu kios." }, 400);
@@ -186,7 +186,7 @@ Deno.serve(async (request) => {
     return respond({ error: "Akun Owner utama tidak dapat diubah dari halaman ini." }, 403);
   }
   if (!isOwner && !isLocalRole(target.role)) {
-    return respond({ error: "Admin Pusat hanya dapat mengubah akun Admin Kios atau Operator." }, 403);
+    return respond({ error: "Admin Pusat hanya dapat mengubah akun Admin Kios." }, 403);
   }
   if (body.userId === callerData.user.id && body.role !== callerProfile.role) {
     return respond({ error: "Anda tidak dapat mengubah role akun yang sedang digunakan." }, 400);

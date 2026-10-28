@@ -167,32 +167,6 @@ Deno.serve(async (request) => {
     return createKioskSession(kiosk);
   }
 
-  if (body.action === "operator_login") {
-    const { profile, error: profileError, unauthorized } = await getStaffProfile();
-    if (unauthorized) {
-      return respond({ error: "Sesi login staf tidak valid. Silakan masuk kembali." }, 401);
-    }
-    if (profileError) {
-      console.error("Gagal memeriksa hak akses Operator:", profileError);
-      return respond({ error: "Hak akses Operator belum bisa diperiksa." }, 500);
-    }
-    if (profile?.role !== "operator" || !profile.kiosk_id) {
-      return respond({ error: "Akun ini tidak memiliki akses operasional kios." }, 403);
-    }
-
-    const { data: kiosk, error: kioskError } = await serviceClient
-      .from("kiosks")
-      .select("id, kiosk_code, kiosk_name, package_type, location")
-      .eq("id", profile.kiosk_id)
-      .maybeSingle();
-    if (kioskError) {
-      console.error("Gagal memuat kios untuk akun Operator:", kioskError);
-      return respond({ error: "Data kios belum bisa dimuat. Silakan coba lagi." }, 500);
-    }
-    if (!kiosk) return respond({ error: "Kios untuk akun Operator tidak ditemukan." }, 404);
-    return createKioskSession(kiosk);
-  }
-
   if (body.action === "record") {
     if (!body.sessionToken) {
       return respond({ error: "Sesi login sudah berakhir. Silakan masuk kembali ke kios." }, 401);

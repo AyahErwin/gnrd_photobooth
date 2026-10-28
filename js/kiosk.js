@@ -132,7 +132,7 @@ async function initializeKioskManagement() {
             "success",
           );
         } else {
-          if (!password) throw new Error("Masukkan password operator untuk kios baru.");
+          if (!password) throw new Error("Masukkan password untuk kios baru.");
           const { error } = await supabaseClient.from("kiosks").insert([
             {
               kiosk_code,

@@ -24,14 +24,9 @@ window.adminAuthReady = (async function protectAdminRoute() {
     return null;
   }
 
-  if (!profile || !["owner", "hq_admin", "kiosk_admin", "operator"].includes(profile.role)) {
+  if (!profile || !["owner", "hq_admin", "kiosk_admin"].includes(profile.role)) {
     await supabaseClient.auth.signOut();
     window.location.replace("staff-login.html");
-    return null;
-  }
-
-  if (profile.role === "operator") {
-    window.location.replace("index.html");
     return null;
   }
 
@@ -53,7 +48,6 @@ window.adminAuthReady = (async function protectAdminRoute() {
     owner: "Owner",
     hq_admin: "Admin Pusat",
     kiosk_admin: "Admin Kios",
-    operator: "Operator",
   };
   const container = document.getElementById("staff-session-bar");
   if (container) {
