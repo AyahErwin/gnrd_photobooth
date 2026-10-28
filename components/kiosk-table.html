@@ -1,0 +1,40 @@
+<div class="admin-ios-card p-5 sm:p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      <i class="fa-solid fa-list"></i> Daftar Kios Terdaftar
+    </h2>
+    <span
+      id="kiosk-count"
+      class="text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-semibold"
+    >
+      0 Kios
+    </span>
+  </div>
+
+  <div class="overflow-x-auto rounded-2xl border border-gray-200">
+    <table class="min-w-[720px] w-full text-left text-sm text-gray-700">
+      <thead
+        class="bg-gray-50 text-gray-500 font-semibold uppercase border-b border-gray-200"
+      >
+        <tr>
+          <th class="p-3 sm:p-4">Kode Kios</th>
+          <th class="p-3 sm:p-4">Nama Outlet</th>
+          <th class="p-3 sm:p-4">Paket</th>
+          <th class="p-3 sm:p-4">Lokasi</th>
+          <th class="p-3 sm:p-4">Status</th>
+          <th class="p-3 sm:p-4 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody
+        id="table-kiosks-body"
+        class="divide-y divide-gray-100 bg-white"
+      >
+        <tr>
+          <td colspan="6" class="p-4 text-center text-gray-500">
+            Memuat data kios...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

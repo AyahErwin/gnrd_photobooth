@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manajemen Kios — GNRD Photobooth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="css/admin-ios.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body class="admin-ios-page hidden min-h-screen p-4 sm:p-6">
+    <div
+      id="staff-session-bar"
+      class="hidden mx-auto max-w-5xl mb-4 flex items-center justify-end gap-3"
+    ></div>
+    <div class="max-w-5xl mx-auto space-y-5">
+      <div id="header-container"></div>
+      <div id="kiosk-form-container"></div>
+      <div id="kiosk-table-container"></div>
+      <div id="kiosk-revenue-container"></div>
+    </div>
+
+    <div id="modal-container"></div>
+
+    <script src="js/config.js"></script>
+    <script src="js/admin-auth.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      function showKioskPageError(message) {
+        const tbody = document.getElementById("table-kiosks-body");
+        if (tbody) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 6;
+          cell.className = "p-4 text-center text-rose-400";
+          cell.textContent = message;
+          row.appendChild(cell);
+          tbody.replaceChildren(row);
+        } else {
+          console.error(message);
+        }
+      }
+
+      async function loadComponent(elementId, filePath) {
+        const response = await fetch(filePath);
+        if (!response.ok) {
+          throw new Error(`Failed to load page component: ${filePath}`);
+        }
+
+        const container = document.getElementById(elementId);
+        if (!container) {
+          throw new Error(`Kontainer ${elementId} tidak ditemukan.`);
+        }
+        container.innerHTML = await response.text();
+      }
+
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+          document.body.appendChild(script);
+        });
+      }
+
+      async function initializeKioskPage() {
+        await window.adminAuthReady;
+        if (
+          !window.currentStaffProfile ||
+          !["owner", "hq_admin"].includes(window.currentStaffProfile.role)
+        ) {
+          window.location.replace("admin.html");
+          return;
+        }
+
+        try {
+          await Promise.all([
+            loadComponent("header-container", "components/header.html"),
+            loadComponent("kiosk-form-container", "components/kiosk-form.html"),
+            loadComponent("kiosk-table-container", "components/kiosk-table.html"),
+            loadComponent("kiosk-revenue-container", "components/kiosk-revenue.html"),
+            loadComponent("modal-container", "components/modal-notice.html"),
+          ]);
+
+          await loadScript("js/kiosk.js");
+          await loadScript("js/kiosk-revenue.js");
+        } catch (error) {
+          console.error("Gagal menginisialisasi halaman kios:", error);
+          showKioskPageError(
+            "Daftar kios belum bisa dibuka. Muat ulang halaman, atau hubungi pengelola jika masalah berlanjut.",
+          );
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initializeKioskPage, {
+          once: true,
+        });
+      } else {
+        initializeKioskPage();
+      }
+    </script>
+  </body>
+</html>

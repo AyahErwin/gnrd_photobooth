@@ -1,17 +1,43 @@
-/* Custom Styles & Animation untuk Photobooth Kiosk */
+/* Custom Scrollbar untuk Tabel Kios */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-@keyframes scan {
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(147, 51, 234, 0.3);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(147, 51, 234, 0.6);
+}
+
+/* Animasi Scan Line pada Preview QRIS */
+@keyframes scanMove {
   0% {
-    top: 0%;
+    top: 5%;
+    opacity: 0.8;
   }
   50% {
-    top: 95%;
+    opacity: 1;
   }
   100% {
-    top: 0%;
+    top: 90%;
+    opacity: 0.8;
   }
 }
 
 .scan-line {
-  animation: scan 2.5s infinite ease-in-out;
+  animation: scanMove 2s ease-in-out infinite alternate;
+}
+
+/* Penyesuaian Kiosk Steps Switch */
+.kiosk-step {
+  transition: opacity 0.3s ease-in-out;
 }

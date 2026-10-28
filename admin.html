@@ -9,26 +9,39 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     />
+    <link rel="stylesheet" href="css/admin-ios.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body
-    class="bg-slate-900 text-white font-sans min-h-screen p-6 flex flex-col items-center justify-center relative"
+    class="admin-ios-page hidden min-h-screen p-4 sm:p-6 flex flex-col items-center justify-center relative"
   >
     <div
-      class="max-w-xl w-full bg-slate-800 border border-white/10 rounded-3xl p-8 shadow-2xl"
+      id="staff-session-bar"
+      class="hidden absolute top-4 right-4 z-10 flex items-center gap-3"
+    ></div>
+    <div
+      class="admin-ios-card max-w-xl w-full p-5 sm:p-8"
     >
-      <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-        <i class="fa-solid fa-sliders text-purple-400 text-3xl"></i>
+      <div class="flex items-center gap-3 mb-6 border-b border-gray-200 pb-4">
+        <i class="fa-solid fa-sliders text-blue-600 text-3xl"></i>
         <div>
-          <h1 class="text-2xl font-black">Panel Konfigurasi Kiosk</h1>
-          <p class="text-xs text-slate-400">
+          <h1 class="text-2xl font-bold text-gray-900">Panel Konfigurasi Kiosk</h1>
+          <p class="text-xs text-gray-600">
             Pengaturan Terpusat via Database Supabase
           </p>
         </div>
       </div>
 
+      <a
+        data-head-office-only
+        href="kiosks.html"
+        class="w-full py-3 bg-white border border-blue-200 hover:bg-blue-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-blue-700 transition-all mb-6"
+      >
+        <i class="fa-solid fa-store"></i> Kelola Data Kios
+      </a>
+
       <div
-        class="mb-6 bg-slate-900/50 p-4 rounded-2xl flex items-center gap-4 border border-white/5"
+        class="admin-ios-summary mb-6 p-4 rounded-2xl flex items-center gap-4"
       >
         <img
           id="admin-qris-preview"
@@ -37,193 +50,161 @@
           class="w-20 h-20 object-contain bg-white p-2 rounded-xl"
         />
         <div>
-          <p class="text-xs text-slate-400 uppercase font-bold">
+          <p class="text-xs text-gray-600 uppercase font-bold">
             QRIS Aktif Saat Ini
           </p>
           <p
             id="admin-price-preview"
-            class="text-lg font-bold text-emerald-400"
+            class="text-lg font-bold text-green-700"
           >
             Rp 0
           </p>
-          <p id="admin-time-preview" class="text-xs text-amber-400 font-mono">
+          <p id="admin-time-preview" class="text-xs text-amber-700 font-mono">
             Timer: 0 Detik
           </p>
         </div>
       </div>
 
       <form id="form-admin-config" class="space-y-4 text-sm">
-        <!-- Upload Video Promo Baru -->
-        <div>
-          <label class="block font-bold mb-1 text-slate-300"
-            >Upload Video Promo Standby (.mp4)</label
+        <div id="config-target-container" data-head-office-only>
+          <label
+            class="block font-semibold mb-1 text-gray-700"
+            for="config-target-kiosk"
+            >Kios yang dikonfigurasi</label
           >
-          <input
-            type="file"
-            id="input-video-file"
-            accept="video/mp4,video/*"
-            class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-slate-300 text-xs focus:outline-none focus:border-purple-500"
-          />
-          <p class="text-[11px] text-slate-400 mt-1">
-            Video yang akan diputar berulang-ulang saat kiosk dalam kondisi
-            idle.
-          </p>
+          <select
+            id="config-target-kiosk"
+            class="admin-ios-control w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-900"
+          ></select>
         </div>
 
-        <!-- Upload QRIS Baru -->
-        <div>
-          <label class="block font-bold mb-1 text-slate-300"
-            >Upload Gambar QRIS Baru</label
-          >
-          <input
-            type="file"
-            id="input-qris-file"
-            accept="image/*"
-            class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-slate-300 text-xs focus:outline-none focus:border-purple-500"
-          />
+        <p
+          id="kiosk-admin-config-note"
+          class="hidden rounded-xl bg-blue-50 p-3 text-blue-800"
+        >
+          Anda hanya dapat mengubah harga dan durasi QRIS untuk kios ini.
+        </p>
+
+        <div id="global-media-config" data-head-office-only class="space-y-4">
+          <div>
+            <label class="block font-semibold mb-1 text-gray-700"
+              >Upload Video Promo Standby (.mp4)</label
+            >
+            <input
+              type="file"
+              id="input-video-file"
+              accept="video/mp4,video/*"
+              class="admin-ios-control w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-700 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+
+          <div>
+            <label class="block font-semibold mb-1 text-gray-700"
+              >Upload Gambar QRIS Baru</label
+            >
+            <input
+              type="file"
+              id="input-qris-file"
+              accept="image/*"
+              class="admin-ios-control w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-700 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
         </div>
 
-        <!-- Ubah Harga -->
         <div>
-          <label class="block font-bold mb-1 text-slate-300"
+          <label class="block font-semibold mb-1 text-gray-700"
             >Harga Paket Photobooth (Rp)</label
           >
           <input
             type="number"
             id="input-price"
             required
-            class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-purple-500 font-mono text-base"
+            min="0"
+            max="2147483647"
+            step="1"
+            class="admin-ios-control w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono text-base"
           />
         </div>
 
-        <!-- Ubah Timer -->
         <div>
-          <label class="block font-bold mb-1 text-slate-300"
+          <label class="block font-semibold mb-1 text-gray-700"
             >Durasi Timer QRIS (Detik)</label
           >
           <input
             type="number"
             id="input-qris-time"
             required
-            class="w-full bg-slate-900 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-purple-500 font-mono text-base"
+            min="1"
+            max="300"
+            step="1"
+            class="admin-ios-control w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-mono text-base"
           />
         </div>
 
         <div class="pt-4 flex gap-4">
           <a
+            data-head-office-only
             href="index.html"
-            class="w-1/2 py-3.5 rounded-2xl border border-white/10 text-center font-bold hover:bg-white/5 transition-all"
+            class="w-1/2 py-3.5 rounded-xl border border-gray-300 bg-white text-gray-700 text-center font-semibold hover:bg-gray-50 transition-all"
             >Lihat Layar Kiosk</a
           >
           <button
             type="submit"
             id="btn-save"
-            class="w-1/2 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-600/30 transition-all flex justify-center items-center gap-2"
+            class="w-1/2 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all flex justify-center items-center gap-2"
           >
-            <i class="fa-solid fa-floppy-disk"></i>
-            Simpan Ke Supabase
+            <i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase
           </button>
         </div>
       </form>
-    </div>
 
-    <div
-      id="global-modal-notice"
-      class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
-    >
-      <div
-        class="bg-slate-800 border border-white/20 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl flex flex-col items-center"
+      <div id="kiosk-revenue-container" class="mt-6"></div>
+
+      <a
+        data-head-office-only
+        href="staff-users.html"
+        class="mt-4 w-full py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-700 transition-all"
       >
-        <i
-          id="modal-notice-icon"
-          class="fa-solid fa-circle-check text-emerald-400 text-5xl mb-3"
-        ></i>
-        <h3 id="modal-notice-title" class="text-xl font-bold text-white mb-2">
-          Notifikasi
-        </h3>
-        <p id="modal-notice-message" class="text-sm text-slate-300 mb-6">
-          Pesan notifikasi di sini...
-        </p>
-
-        <button
-          id="btn-modal-notice-ok"
-          class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-2xl shadow-lg active:scale-95 transition-all"
-        >
-          Lanjutkan
-        </button>
-      </div>
+        <i class="fa-solid fa-users"></i> Kelola Akun Staf Kios
+      </a>
     </div>
 
-    <script src="js/app.js"></script>
+    <!-- Container Komponen Modal Pop-Up Notifikasi Global -->
+    <div id="modal-container"></div>
+
+    <!-- Script Utama -->
     <script src="js/config.js"></script>
+    <script src="js/admin-auth.js"></script>
+    <script src="js/app.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", async () => {
-        const config = await getAppConfigFromDB();
-
-        const priceInput = document.getElementById("input-price");
-        const timeInput = document.getElementById("input-qris-time");
-        const qrisPreview = document.getElementById("admin-qris-preview");
-        const pricePreview = document.getElementById("admin-price-preview");
-        const timePreview = document.getElementById("admin-time-preview");
-
-        priceInput.value = config.price;
-        timeInput.value = config.qrisTime;
-        if (config.qrisImage) qrisPreview.src = config.qrisImage;
-        pricePreview.textContent = `Rp ${Number(config.price).toLocaleString("id-ID")}`;
-        timePreview.textContent = `Timer: ${config.qrisTime} Detik`;
-
-        const form = document.getElementById("form-admin-config");
-        form.addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const btnSave = document.getElementById("btn-save");
-          btnSave.disabled = true;
-          btnSave.innerHTML =
-            '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
-
-          const qrisFileInput = document.getElementById("input-qris-file");
-          const videoFileInput = document.getElementById("input-video-file");
-
-          let newQrisUrl = null;
-          let newVideoUrl = null;
-
-          // Jika ada video yang dipilih
-          if (videoFileInput.files && videoFileInput.files[0]) {
-            newVideoUrl = await uploadVideoToStorage(videoFileInput.files[0]);
-            // Jika upload gagal, hentikan proses penyimpanan
-            if (!newVideoUrl) {
-              btnSave.disabled = false;
-              btnSave.innerHTML =
-                '<i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase';
-              return;
-            }
+        await window.adminAuthReady;
+        if (!window.currentStaffProfile) return;
+        try {
+          const [modalRes, revenueRes] = await Promise.all([
+            fetch("components/modal-notice.html"),
+            fetch("components/kiosk-revenue.html"),
+          ]);
+          if (!modalRes.ok || !revenueRes.ok) {
+            throw new Error("Komponen halaman admin gagal dimuat.");
           }
+          document.getElementById("modal-container").innerHTML = await modalRes.text();
+          document.getElementById("kiosk-revenue-container").innerHTML =
+            await revenueRes.text();
 
-          // Jika ada gambar QRIS yang dipilih
-          if (qrisFileInput.files && qrisFileInput.files[0]) {
-            newQrisUrl = await uploadQrisImageToStorage(qrisFileInput.files[0]);
-            if (!newQrisUrl) {
-              btnSave.disabled = false;
-              btnSave.innerHTML =
-                '<i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase';
-              return;
-            }
-          }
-
-          const success = await saveAppConfigToDB(
-            parseInt(priceInput.value),
-            parseInt(timeInput.value),
-            newQrisUrl,
-            newVideoUrl,
-          );
-
-          if (success) {
-            window.location.reload();
-          } else {
-            btnSave.disabled = false;
-            btnSave.innerHTML =
-              '<i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase';
-          }
-        });
+          const script = document.createElement("script");
+          script.src = "js/admin.js";
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = () => reject(new Error("js/admin.js gagal dimuat."));
+            document.body.appendChild(script);
+          });
+          const revenueScript = document.createElement("script");
+          revenueScript.src = "js/kiosk-revenue.js";
+          document.body.appendChild(revenueScript);
+        } catch (e) {
+          console.error("Gagal memuat komponen:", e);
+        }
       });
     </script>
   </body>

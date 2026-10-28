@@ -1,0 +1,188 @@
+.admin-ios-page {
+  background: #e7e6e1;
+  color: #34383b;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.admin-ios-card {
+  background: #f7f6f2;
+  border: 1px solid rgba(63, 67, 69, 0.12);
+  border-radius: 24px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 8px 24px rgba(45, 49, 51, 0.06);
+}
+
+.admin-ios-page .bg-white:not(img) {
+  background-color: #f7f6f2 !important;
+}
+
+.admin-ios-summary {
+  background: #eeede8;
+  border: 1px solid rgba(63, 67, 69, 0.08);
+}
+
+.admin-ios-control {
+  min-height: 46px;
+  border-color: #cfcec8;
+  border-radius: 12px;
+  background-color: #f4f3ef !important;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.admin-ios-control:focus {
+  border-color: #71879a;
+  box-shadow: 0 0 0 3px rgba(91, 116, 137, 0.14);
+}
+
+.admin-ios-page .text-blue-600,
+.admin-ios-page .text-blue-700 {
+  color: #526d83 !important;
+}
+
+.admin-ios-page .bg-blue-50 {
+  background-color: #e8edf0 !important;
+}
+
+.admin-ios-page .bg-blue-600 {
+  background-color: #60798d !important;
+}
+
+.admin-ios-page .hover\:bg-blue-700:hover {
+  background-color: #526b7f !important;
+}
+
+.admin-ios-page .border-blue-200,
+.admin-ios-page .border-blue-300 {
+  border-color: #c8d1d6 !important;
+}
+
+.admin-ios-page .text-green-700 {
+  color: #57745f !important;
+}
+
+.admin-ios-page .text-green-800 {
+  color: #627765 !important;
+}
+
+.admin-ios-page .text-amber-700 {
+  color: #826f4c !important;
+}
+
+.admin-ios-page .text-amber-800 {
+  color: #826f4c !important;
+}
+
+.admin-ios-page .bg-green-50 {
+  background-color: #e9eee8 !important;
+}
+
+.admin-ios-page .bg-amber-50 {
+  background-color: #f1eee6 !important;
+}
+
+.admin-ios-page .bg-red-50 {
+  background-color: #f2e9e7 !important;
+}
+
+.admin-ios-page .text-red-600 {
+  color: #99645d !important;
+}
+
+.admin-ios-page #global-modal-notice > div {
+  background: #f7f6f2 !important;
+  border: 1px solid rgba(63, 67, 69, 0.16) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 60px rgba(30, 33, 35, 0.18) !important;
+}
+
+.admin-ios-page #global-modal-notice {
+  background-color: rgba(42, 44, 45, 0.46) !important;
+  backdrop-filter: blur(5px);
+}
+
+.admin-ios-page #modal-notice-icon {
+  filter: saturate(0.72);
+}
+
+.admin-ios-page #modal-notice-countdown {
+  color: #b04444;
+}
+
+.admin-ios-page #global-modal-notice h3 {
+  color: #34383b !important;
+}
+
+.admin-ios-page #global-modal-notice p {
+  color: #666863 !important;
+}
+
+.admin-ios-page #btn-modal-notice-ok {
+  background: #60798d !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+.admin-ios-page #btn-modal-notice-ok:hover {
+  background: #526b7f !important;
+}
+
+.admin-ios-page #btn-modal-notice-cancel {
+  background: #e8e7e1 !important;
+  color: #45494b !important;
+  border-radius: 14px !important;
+}
+
+.admin-ios-page #btn-modal-notice-cancel:hover {
+  background: #dcdbd5 !important;
+}
+
+.admin-ios-login-card {
+  width: 100%;
+  max-width: 28rem;
+  padding: 2rem;
+}
+
+.admin-ios-login-card h1 {
+  color: #34383b;
+}
+
+.admin-ios-login-card p {
+  color: #6b6d69;
+}
+
+.admin-ios-login-card label {
+  color: #4b4f50;
+}
+
+.admin-ios-login-icon {
+  background: #e9edf0;
+  color: #60798d;
+  border: 1px solid #d5dde1;
+}
+
+.admin-ios-login-button {
+  background: #60798d;
+  color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 10px rgba(65, 87, 105, 0.16);
+}
+
+.admin-ios-login-button:hover {
+  background: #526b7f;
+}
+
+@media (max-width: 480px) {
+  .admin-ios-login-card {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-ios-card {
+    border-radius: 20px;
+  }
+}

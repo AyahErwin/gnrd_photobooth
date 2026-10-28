@@ -1,144 +1,146 @@
-// 1. KUNCI API SUPABASE
+// ============================================================
+// KONFIGURASI SUPABASE & HELPER DATABASE / STORAGE
+// ============================================================
+
 const SUPABASE_URL = "https://rhfyenlttmypowlssxuh.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_bQvgfIsz5msS7PTyUoRRiQ_jzB79BE4";
+const SUPABASE_ANON_KEY =
+  "sb_publishable_bQvgfIsz5msS7PTyUoRRiQ_jzB79BE4";
+const supabaseClient = supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+);
 
-// 2. INISIALISASI CLIENT SUPABASE
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const DEFAULT_APP_CONFIG = Object.freeze({
+  price: 50000,
+  qrisTime: 180,
+  qrisImage: "https://placehold.co/300x300?text=QRIS+Belum+Ada",
+  videoUrl: "",
+});
 
-// 3. AMBIL KONFIGURASI DARI DATABASE SUPABASE
+// Ambil Konfigurasi dari DB dengan Fallback Nilai Default
 async function getAppConfigFromDB() {
-  try {
-    const { data, error } = await supabaseClient
-      .from("app_config")
-      .select("*")
-      .eq("id", 1)
-      .single();
+  const { data, error } = await supabaseClient
+    .from("app_config")
+    .select("id, price, qris_time, qris_image_url, video_url")
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
 
-    if (error) throw error;
+  if (error) throw error;
 
-    return {
-      price: data.price,
-      qrisTime: data.qris_time,
-      qrisImage: data.qris_image_url,
-      videoUrl:
-        data.video_url ||
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    };
-  } catch (err) {
-    console.error("Gagal mengambil konfigurasi Supabase:", err.message);
-    return {
-      price: 25000,
-      qrisTime: 300,
-      qrisImage:
-        "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GNRD_PHOTOBOOTH_PAYMENT_DEMO",
-      videoUrl:
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-    };
-  }
+  return {
+    price: data?.price ?? DEFAULT_APP_CONFIG.price,
+    qrisTime: data?.qris_time ?? DEFAULT_APP_CONFIG.qrisTime,
+    qrisImage: data?.qris_image_url || DEFAULT_APP_CONFIG.qrisImage,
+    videoUrl: data?.video_url || DEFAULT_APP_CONFIG.videoUrl,
+  };
 }
 
-// 4. UPLOAD VIDEO PROMO KE SUPABASE STORAGE (BUCKET: kiosk-videos)
-async function uploadVideoToStorage(file) {
-  try {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `promo_${Date.now()}.${fileExt}`;
+async function getKioskSettingsFromDB(kioskId) {
+  const { data, error } = await supabaseClient
+    .from("kiosk_settings")
+    .select("price, qris_time")
+    .eq("kiosk_id", kioskId)
+    .maybeSingle();
 
-    // Upload langsung di root bucket kiosk-videos
-    const { error: uploadError } = await supabaseClient.storage
-      .from("kiosk-videos")
-      .upload(fileName, file, { upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabaseClient.storage
-      .from("kiosk-videos")
-      .getPublicUrl(fileName);
-
-    return data.publicUrl;
-  } catch (err) {
-    console.error("Gagal upload video:", err.message);
-    if (typeof showModalNotice === "function") {
-      showModalNotice(
-        "Upload Gagal",
-        "Gagal upload file video: " + err.message,
-        "error",
-      );
-    }
-    return null;
-  }
+  if (error) throw error;
+  return data;
 }
 
-// 5. UPLOAD GAMBAR QRIS KE SUPABASE STORAGE (BUCKET: qris-images)
+async function saveKioskSettingsToDB(kioskId, price, qrisTime) {
+  const { data, error } = await supabaseClient
+    .from("kiosk_settings")
+    .update({
+      price,
+      qris_time: qrisTime,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("kiosk_id", kioskId)
+    .select("kiosk_id")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Perubahan pengaturan kios tidak berhasil disimpan.");
+}
+
+// Upload Gambar QRIS ke Storage (Bucket: qris-images)
 async function uploadQrisImageToStorage(file) {
-  try {
-    const fileExt = file.name.split(".").pop();
-    const fileName = `qris_${Date.now()}.${fileExt}`;
-    const filePath = `qris_codes/${fileName}`;
+  const fileName = `qris_${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+  const { error } = await supabaseClient.storage
+    .from("qris-images")
+    .upload(fileName, file, { cacheControl: "3600", upsert: true });
 
-    const { error: uploadError } = await supabaseClient.storage
-      .from("qris-images")
-      .upload(filePath, file, { upsert: true });
+  if (error) throw error;
 
-    if (uploadError) throw uploadError;
+  const { data: publicUrlData } = supabaseClient.storage
+    .from("qris-images")
+    .getPublicUrl(fileName);
 
-    const { data } = supabaseClient.storage
-      .from("qris-images")
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  } catch (err) {
-    console.error("Gagal upload gambar QRIS:", err.message);
-    if (typeof showModalNotice === "function") {
-      showModalNotice(
-        "Upload Gagal",
-        "Gagal upload gambar: " + err.message,
-        "error",
-      );
-    }
-    return null;
-  }
+  return publicUrlData.publicUrl;
 }
 
-// 6. SIMPAN CONFIG KE TABEL APP_CONFIG
-async function saveAppConfigToDB(newPrice, newTime, imageUrl, videoUrl) {
+// Upload Video Promo ke Storage (Bucket: kiosk-videos)
+async function uploadVideoToStorage(file) {
+  const fileName = `video_${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+  const { error } = await supabaseClient.storage
+    .from("kiosk-videos")
+    .upload(fileName, file, { cacheControl: "3600", upsert: true });
+
+  if (error) throw error;
+
+  const { data: publicUrlData } = supabaseClient.storage
+    .from("kiosk-videos")
+    .getPublicUrl(fileName);
+
+  return publicUrlData.publicUrl;
+}
+
+// Simpan/Update Konfigurasi ke Database Supabase
+async function saveAppConfigToDB(price, qrisTime, newQrisUrl, newVideoUrl) {
   try {
-    const updateData = {
-      price: newPrice,
-      qris_time: newTime,
-      updated_at: new Date(),
+    const { data: existingData, error: selectError } = await supabaseClient
+      .from("app_config")
+      .select("id, qris_image_url, video_url")
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+
+    const payload = {
+      price: price,
+      qris_time: qrisTime,
+      qris_image_url:
+        newQrisUrl ||
+        existingData?.qris_image_url ||
+        "https://placehold.co/300x300?text=QRIS+Siap",
+      video_url: newVideoUrl || existingData?.video_url || "",
+      updated_at: new Date().toISOString(),
     };
 
-    if (imageUrl) updateData.qris_image_url = imageUrl;
-    if (videoUrl) updateData.video_url = videoUrl;
+    if (existingData?.id) {
+      const { data, error } = await supabaseClient
+        .from("app_config")
+        .update(payload)
+        .eq("id", existingData.id)
+        .select("id")
+        .maybeSingle();
 
-    const { error } = await supabaseClient
-      .from("app_config")
-      .update(updateData)
-      .eq("id", 1);
+      if (error) throw error;
+      if (!data) throw new Error("Perubahan app_config tidak berhasil disimpan.");
+    } else {
+      const { error } = await supabaseClient
+        .from("app_config")
+        .insert([payload])
+        .select("id")
+        .single();
 
-    if (error) throw error;
-
-    return new Promise((resolve) => {
-      if (typeof showModalNotice === "function") {
-        showModalNotice(
-          "Berhasil Disimpan!",
-          "Konfigurasi berhasil diperbarui di Database Supabase.",
-          "success",
-          () => resolve(true),
-        );
-      } else {
-        resolve(true);
-      }
-    });
-  } catch (err) {
-    console.error("Gagal menyimpan ke Supabase:", err.message);
-    if (typeof showModalNotice === "function") {
-      showModalNotice(
-        "Gagal Menyimpan",
-        "Gagal menyimpan ke database: " + err.message,
-        "error",
-      );
+      if (error) throw error;
     }
-    return false;
+
+    return true;
+  } catch (err) {
+    console.error("Gagal menyimpan ke DB:", err.message);
+    throw err;
   }
 }

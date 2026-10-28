@@ -85,6 +85,7 @@ async function initPaymentStep() {
   // 1. Hubungkan Tombol MULAI SESI FOTO secara langsung
   const btnStart = document.getElementById("btn-start-kiosk");
   if (btnStart) {
+    btnStart.disabled = true;
     btnStart.onclick = () => {
       if (typeof goToStep === "function") goToStep(1);
       if (window.activeQrisTime) startQrisTimer(window.activeQrisTime);
@@ -92,74 +93,123 @@ async function initPaymentStep() {
   }
 
   // 2. Ambil data Konfigurasi dari Supabase dengan aman
-  let currentConfig = {
-    price: 25000,
-    qrisTime: 300,
-    qrisImage:
-      "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=GNRD_PHOTOBOOTH_PAYMENT_DEMO",
-    videoUrl:
-      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-  };
+  let currentConfig = { ...DEFAULT_APP_CONFIG };
 
   try {
-    if (typeof getAppConfigFromDB === "function") {
-      const dbConfig = await getAppConfigFromDB();
-      if (dbConfig) currentConfig = { ...currentConfig, ...dbConfig };
+    const activeKiosk = getActiveKioskSession();
+    if (!activeKiosk?.sessionToken) {
+      throw new Error("Sesi login sudah berakhir. Silakan masuk kembali ke kios.");
     }
+
+    const { data, error } = await supabaseClient.functions.invoke(
+      "kiosk-revenue",
+      {
+        body: {
+          action: "config",
+          sessionToken: activeKiosk.sessionToken,
+        },
+      },
+    );
+    if (error) throw error;
+    if (!data?.config) throw new Error("Konfigurasi kios belum tersedia.");
+    currentConfig = { ...currentConfig, ...data.config };
+    if (btnStart) btnStart.disabled = false;
   } catch (err) {
-    console.warn("Memakai konfigurasi standar:", err);
+    console.error("Gagal memuat konfigurasi kios:", err);
+    if (btnStart) btnStart.disabled = true;
+    showModalNotice(
+      "Konfigurasi Belum Dimuat",
+      "Pengaturan kiosk belum bisa dimuat. Silakan muat ulang atau hubungi pengelola.",
+      "error",
+    );
   }
 
-  window.activeQrisTime = currentConfig.qrisTime;
-
-  // 3. Putar Video
-  loadPromoVideo(currentConfig.videoUrl);
-
-  // 4. Set Tampilan Harga & QRIS
   const priceElem = document.getElementById("qris-price-display");
-  if (priceElem)
-    priceElem.textContent = `Rp ${Number(currentConfig.price).toLocaleString("id-ID")}`;
-
   const qrisImgElem = document.getElementById("qris-image-display");
-  if (qrisImgElem) qrisImgElem.src = currentConfig.qrisImage;
+
+  function applyConfig(nextConfig, reloadVideo = false) {
+    const previousVideoUrl = currentConfig.videoUrl;
+    currentConfig = { ...currentConfig, ...nextConfig };
+    window.activeQrisTime = currentConfig.qrisTime;
+
+    if (priceElem && Number.isFinite(Number(currentConfig.price))) {
+      priceElem.textContent = `Rp ${Number(currentConfig.price).toLocaleString("id-ID")}`;
+    }
+    if (qrisImgElem && currentConfig.qrisImage) {
+      qrisImgElem.src = currentConfig.qrisImage;
+    }
+    if (reloadVideo || currentConfig.videoUrl !== previousVideoUrl) {
+      loadPromoVideo(currentConfig.videoUrl);
+    }
+  }
+
+  // 3. Tampilkan konfigurasi kios yang dikirim backend.
+  applyConfig(currentConfig, true);
 
   // 5. Setup Tombol Simulasi Bayar
   const btnSimulate = document.getElementById("btn-simulate-pay");
   if (btnSimulate) {
-    btnSimulate.onclick = () => {
-      if (window.qrisCountdownInterval)
-        clearInterval(window.qrisCountdownInterval);
-      playSuccessSound();
-      showModalNotice(
-        "Pembayaran Berhasil!",
-        "Menuju ke pemilihan frame...",
-        "success",
-        () => {
-          if (typeof goToStep === "function") goToStep(2);
-        },
-      );
+    btnSimulate.onclick = async () => {
+      btnSimulate.disabled = true;
+      btnSimulate.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> Mencatat pembayaran...';
+
+      try {
+        const activeKiosk = getActiveKioskSession();
+        if (!activeKiosk?.id || !activeKiosk?.sessionToken) {
+          throw new Error("Sesi kios tidak ditemukan. Silakan masuk kembali.");
+        }
+
+        const { data, error } = await supabaseClient.functions.invoke(
+          "kiosk-revenue",
+          {
+            body: {
+              action: "record",
+              kioskId: activeKiosk.id,
+              sessionToken: activeKiosk.sessionToken,
+              expectedAmount: Number(currentConfig.price),
+            },
+          },
+        );
+
+        if (error) {
+          console.error("Gagal mencatat pembayaran:", error);
+          const response = error.context;
+          if (response && typeof response.json === "function") {
+            const errorBody = await response.clone().json().catch(() => null);
+            if (errorBody?.error) throw new Error(errorBody.error);
+          }
+          throw new Error(
+            "Pembayaran belum tercatat. Periksa koneksi lalu coba lagi.",
+          );
+        }
+        if (!data?.success) {
+          throw new Error(
+            data?.error || "Pembayaran belum berhasil dicatat. Silakan coba lagi.",
+          );
+        }
+
+        if (window.qrisCountdownInterval) {
+          clearInterval(window.qrisCountdownInterval);
+        }
+        playSuccessSound();
+        if (typeof goToStep === "function") goToStep(2);
+      } catch (error) {
+        console.error("Pembayaran tidak dapat dicatat:", error);
+        showModalNotice(
+          "Pembayaran Belum Tercatat",
+          error.message ||
+            "Pembayaran belum berhasil dicatat. Silakan coba lagi.",
+          "error",
+        );
+      } finally {
+        btnSimulate.disabled = false;
+        btnSimulate.innerHTML =
+          '<i class="fa-solid fa-circle-check"></i> Konfirmasi Pembayaran';
+      }
     };
   }
 
-  // 6. Realtime Listener
-  if (typeof supabaseClient !== "undefined") {
-    supabaseClient
-      .channel("realtime_config")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "app_config" },
-        (payload) => {
-          if (priceElem && payload.new.price)
-            priceElem.textContent = `Rp ${Number(payload.new.price).toLocaleString("id-ID")}`;
-          if (qrisImgElem && payload.new.qris_image_url)
-            qrisImgElem.src = payload.new.qris_image_url;
-          if (payload.new.video_url) loadPromoVideo(payload.new.video_url);
-          if (payload.new.qris_time)
-            window.activeQrisTime = payload.new.qris_time;
-        },
-      )
-      .subscribe();
-  }
 }
 
 document.addEventListener("DOMContentLoaded", initPaymentStep);
