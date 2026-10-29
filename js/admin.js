@@ -24,9 +24,15 @@ async function initializeAdminConfig() {
   const revenueCount = document.getElementById("kiosk-revenue-today-count");
   const revenueStatus = document.getElementById("kiosk-revenue-summary-status");
   const revenueDateInput = document.getElementById("kiosk-revenue-report-date");
-  const revenueDateDisplay = document.getElementById("kiosk-revenue-report-date-display");
-  const revenueTransactions = document.getElementById("kiosk-revenue-transactions");
-  const revenueCountCaption = document.getElementById("kiosk-revenue-count-caption");
+  const revenueDateDisplay = document.getElementById(
+    "kiosk-revenue-report-date-display",
+  );
+  const revenueTransactions = document.getElementById(
+    "kiosk-revenue-transactions",
+  );
+  const revenueCountCaption = document.getElementById(
+    "kiosk-revenue-count-caption",
+  );
   const refreshRevenueButton = document.getElementById(
     "btn-refresh-kiosk-revenue",
   );
@@ -76,8 +82,7 @@ async function initializeAdminConfig() {
   function resetButton(btn) {
     if (!btn) return;
     btn.disabled = false;
-    btn.innerHTML =
-      '<i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase';
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan';
   }
 
   function updatePreview(price, qrisTime, qrisImageUrl) {
@@ -149,12 +154,14 @@ async function initializeAdminConfig() {
         new Date(transaction.created_at),
       );
       const idText = document.createElement("div");
-      idText.className = "mt-1 break-all font-mono text-[10px] leading-4 text-gray-500";
+      idText.className =
+        "mt-1 break-all font-mono text-[10px] leading-4 text-gray-500";
       idText.textContent = `ID: ${transaction.id}`;
       dateCell.append(dateText, idText);
 
       const amountCell = document.createElement("td");
-      amountCell.className = "px-2 py-3 text-right align-top text-xs font-semibold whitespace-nowrap sm:px-3";
+      amountCell.className =
+        "px-2 py-3 text-right align-top text-xs font-semibold whitespace-nowrap sm:px-3";
       amountCell.textContent = currencyFormatter.format(transaction.amount);
       row.append(numberCell, dateCell, amountCell);
       revenueTransactions.appendChild(row);
