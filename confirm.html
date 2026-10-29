@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Mulai Foto | GNRD Photobooth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "Helvetica Neue", Helvetica, Arial, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 text-white antialiased flex flex-col justify-between selection:bg-purple-500 selection:text-white"
+  >
+    <!-- Container Utama -->
+    <main class="flex flex-1 items-center justify-center px-5 py-8">
+      <!-- Section 1: Konfirmasi Sesi (Card Style ala Photobooth) -->
+      <section
+        id="confirm-content"
+        class="w-full max-w-sm rounded-[32px] bg-purple-950/40 backdrop-blur-2xl p-7 shadow-2xl border border-white/10 text-center transition-all duration-300"
+      >
+        <!-- Icon Container -->
+        <div
+          class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[24px] border border-white/15 bg-white/10 shadow-xl text-purple-200"
+        >
+          <i class="fa-solid fa-camera-retro text-3xl"></i>
+        </div>
+
+        <h1 class="text-2xl font-black tracking-tight text-white">
+          Sudah siap untuk foto?
+        </h1>
+        <p class="mt-2 text-[15px] leading-relaxed text-slate-300">
+          Tekan tombol di bawah untuk memulai sesi foto di photobooth.
+        </p>
+
+        <div class="mt-6 rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            SISA WAKTU SESI
+          </p>
+          <p
+            id="confirm-session-timer"
+            class="mt-1 font-mono text-2xl font-bold text-amber-400"
+            role="timer"
+            aria-live="off"
+          >
+            --:--
+          </p>
+        </div>
+
+        <!-- Primary Button (Emerald/Teal Gradient khas Photobooth) -->
+        <button
+          id="btn-confirm-session"
+          type="button"
+          class="mt-8 flex min-h-[52px] w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 text-lg font-extrabold text-white shadow-[0_12px_35px_rgba(16,185,129,0.28)] transition-all hover:brightness-110 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <i class="fa-solid fa-camera text-lg"></i>
+          <span>Mulai Foto</span>
+        </button>
+
+        <p
+          id="confirm-status"
+          class="mt-4 min-h-[20px] text-xs font-medium text-slate-400"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </section>
+
+      <!-- Section 2: Sukses / Terkirim -->
+      <section
+        id="confirm-success"
+        class="hidden w-full max-w-sm rounded-[32px] bg-purple-950/40 backdrop-blur-2xl p-8 shadow-2xl border border-white/10 text-center transition-all duration-300"
+        role="status"
+        aria-live="polite"
+      >
+        <!-- Success Checkmark Badge -->
+        <div
+          class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+        >
+          <i class="fa-solid fa-check text-2xl"></i>
+        </div>
+
+        <h1 class="text-2xl font-black tracking-tight text-white">Selamat!</h1>
+
+        <p class="mt-3 text-[15px] leading-relaxed text-slate-300">
+          Silahkan kembali ke layar photobooth untuk memilih frame.
+        </p>
+
+        <!-- Status Card Note -->
+        <div class="mt-6 rounded-2xl bg-black/30 p-4 border border-white/5">
+          <h3 class="text-sm font-bold text-purple-200">
+            Konfirmasi sudah dikirim ke photobooth.
+          </h3>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer / Credit -->
+    <footer class="pb-6 text-center">
+      <p class="text-[11px] font-black tracking-wider text-slate-400 uppercase">
+        @Developed by Erwin GNRD for personal use only.
+      </p>
+    </footer>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/confirm-session.js"></script>
+  </body>
+</html>

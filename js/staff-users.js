@@ -11,17 +11,47 @@ async function initializeStaffUsers() {
   const emailInput = document.getElementById("staff-user-email");
   const passwordInput = document.getElementById("staff-user-password");
   const roleInput = document.getElementById("staff-user-role");
-  const kioskInput = document.getElementById("staff-user-kiosk");
+  const kioskField = document.getElementById("staff-user-kiosk-field");
+  const kiosksContainer = document.getElementById("staff-user-kiosks");
   const tableBody = document.getElementById("staff-users-body");
   const message = document.getElementById("staff-users-message");
   const saveButton = document.getElementById("btn-save-staff-user");
   const cancelButton = document.getElementById("btn-cancel-staff-edit");
   const isOwner = profile.role === "owner";
+  let availableKiosks = [];
+
+  function getSelectedKioskIds() {
+    return Array.from(
+      kiosksContainer.querySelectorAll('input[name="staff-user-kiosk"]:checked'),
+      (input) => input.value,
+    );
+  }
+
+  function setSelectedKioskIds(kioskIds) {
+    const selected = new Set(kioskIds || []);
+    kiosksContainer
+      .querySelectorAll('input[name="staff-user-kiosk"]')
+      .forEach((input) => {
+        input.checked = selected.has(input.value);
+      });
+  }
 
   function showMessage(text, isError = false) {
     message.textContent = text;
     message.classList.remove("hidden", "bg-red-50", "text-red-700", "bg-green-50", "text-green-700");
     message.classList.add(...(isError ? ["bg-red-50", "text-red-700"] : ["bg-green-50", "text-green-700"]));
+  }
+
+  try {
+    const response = await fetch("components/modal-notice.html");
+    if (!response.ok) {
+      throw new Error(`Gagal memuat dialog notifikasi (HTTP ${response.status}).`);
+    }
+    document.getElementById("modal-container").innerHTML = await response.text();
+  } catch (error) {
+    console.error("Gagal memuat dialog akun staf:", error);
+    showMessage("Dialog konfirmasi belum bisa dimuat. Muat ulang halaman untuk mencoba lagi.", true);
+    return;
   }
 
   function resetForm() {
@@ -36,9 +66,7 @@ async function initializeStaffUsers() {
 
   function updateKioskField() {
     const needsKiosk = roleInput.value === "kiosk_admin";
-    kioskInput.required = needsKiosk;
-    kioskInput.disabled = !needsKiosk;
-    kioskInput.parentElement.classList.toggle("hidden", !needsKiosk);
+    kioskField.classList.toggle("hidden", !needsKiosk);
   }
 
   async function invokeStaffAdmin(body) {
@@ -74,7 +102,11 @@ async function initializeStaffUsers() {
         hq_admin: "Admin Pusat",
         kiosk_admin: "Admin Kios",
       };
-      [user.email, roleLabels[user.role] || user.role, user.kioskName || "-"].forEach((value) => {
+      [
+        user.email,
+        roleLabels[user.role] || user.role,
+        (user.kioskNames || []).join(", ") || "-",
+      ].forEach((value) => {
         const cell = document.createElement("td");
         cell.className = "p-3";
         cell.textContent = value;
@@ -93,7 +125,7 @@ async function initializeStaffUsers() {
         passwordInput.value = "";
         passwordInput.required = false;
         roleInput.value = user.role;
-        kioskInput.value = user.kioskId || "";
+        setSelectedKioskIds(user.kioskIds || (user.kioskId ? [user.kioskId] : []));
         updateKioskField();
         document.getElementById("staff-form-title").textContent = "Edit akun";
         saveButton.textContent = "Simpan Perubahan";
@@ -101,6 +133,50 @@ async function initializeStaffUsers() {
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
       actionCell.appendChild(editButton);
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "ml-2 rounded-lg bg-red-50 px-3 py-1.5 font-semibold text-red-700";
+      deleteButton.textContent = "Hapus";
+      deleteButton.addEventListener("click", () => {
+        showModalConfirm(
+          "Konfirmasi Hapus",
+          `Yakin ingin menghapus akun staf ${user.email}?`,
+          async () => {
+            deleteButton.disabled = true;
+            deleteButton.textContent = "Menghapus...";
+            let accountDeleted = false;
+            try {
+              await invokeStaffAdmin({
+                action: "delete",
+                userId: user.userId,
+              });
+              accountDeleted = true;
+              if (userIdInput.value === user.userId) resetForm();
+              await loadUsers();
+              showModalNotice(
+                "Berhasil Dihapus",
+                `Akun staf ${user.email} berhasil dihapus.`,
+                "success",
+              );
+            } catch (error) {
+              console.error("Gagal menghapus akun staf:", error);
+              deleteButton.disabled = false;
+              deleteButton.textContent = "Hapus";
+              showModalNotice(
+                accountDeleted ? "Berhasil Dihapus" : "Data Belum Terhapus",
+                accountDeleted
+                  ? `Akun staf ${user.email} sudah dihapus, tetapi daftar akun belum bisa dimuat ulang. Muat ulang halaman untuk memperbarui daftar.`
+                  : error.message || "Akun staf belum berhasil dihapus. Coba lagi.",
+                accountDeleted ? "warning" : "error",
+              );
+            }
+          },
+          "Ya, Hapus",
+          "Batal",
+        );
+      });
+      actionCell.appendChild(deleteButton);
       row.appendChild(actionCell);
       tableBody.appendChild(row);
     });
@@ -119,13 +195,28 @@ async function initializeStaffUsers() {
       .order("kiosk_code", { ascending: true });
     if (error) throw error;
 
-    kioskInput.replaceChildren();
-    (kiosks || []).forEach((kiosk) => {
-      const option = document.createElement("option");
-      option.value = kiosk.id;
-      option.textContent = `${kiosk.kiosk_code} — ${kiosk.kiosk_name}`;
-      kioskInput.appendChild(option);
+    availableKiosks = kiosks || [];
+    kiosksContainer.replaceChildren();
+    availableKiosks.forEach((kiosk) => {
+      const label = document.createElement("label");
+      label.className = "flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-50";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.name = "staff-user-kiosk";
+      checkbox.value = kiosk.id;
+      checkbox.className = "h-4 w-4 rounded border-gray-300 text-blue-600";
+      const kioskName = document.createElement("span");
+      kioskName.className = "text-sm text-gray-800";
+      kioskName.textContent = `${kiosk.kiosk_code} — ${kiosk.kiosk_name}`;
+      label.append(checkbox, kioskName);
+      kiosksContainer.appendChild(label);
     });
+    if (availableKiosks.length === 0) {
+      const emptyState = document.createElement("p");
+      emptyState.className = "text-sm text-gray-500";
+      emptyState.textContent = "Belum ada kios yang terdaftar.";
+      kiosksContainer.appendChild(emptyState);
+    }
 
     if (!isOwner) {
       roleInput.querySelector('[data-owner-only]')?.remove();
@@ -140,6 +231,11 @@ async function initializeStaffUsers() {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (roleInput.value === "kiosk_admin" && getSelectedKioskIds().length === 0) {
+      showMessage("Pilih setidaknya satu kios yang sudah terdaftar untuk Admin Kios.", true);
+      return;
+    }
+
     saveButton.disabled = true;
     saveButton.textContent = "Menyimpan...";
     try {
@@ -149,7 +245,7 @@ async function initializeStaffUsers() {
         email: emailInput.value.trim(),
         password: passwordInput.value || undefined,
         role: roleInput.value,
-        kioskId: roleInput.value === "kiosk_admin" ? kioskInput.value : null,
+        kioskIds: roleInput.value === "kiosk_admin" ? getSelectedKioskIds() : [],
       });
       resetForm();
       await loadUsers();

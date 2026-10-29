@@ -99,13 +99,19 @@
           loginScript.src = "js/login.js";
           loginScript.onerror = () => {
             console.error("Gagal memuat js/login.js.");
-            alert("Halaman login gagal dimuat. Silakan muat ulang halaman.");
+            showModalNotice(
+              "Halaman Login Gagal Dimuat",
+              "Silakan muat ulang halaman.",
+              "error",
+            );
           };
           document.body.appendChild(loginScript);
         } catch (error) {
           console.error("Gagal memuat komponen login:", error);
-          alert(
-            "Pop-up login gagal dimuat. Pastikan aplikasi dibuka melalui localhost dan muat ulang halaman.",
+          showModalNotice(
+            "Pop-up Login Gagal Dimuat",
+            "Pastikan aplikasi dibuka melalui alamat server aplikasi, lalu muat ulang halaman.",
+            "error",
           );
         }
       }

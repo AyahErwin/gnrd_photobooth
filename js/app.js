@@ -79,6 +79,38 @@ function clearModalCountdown() {
   }
 }
 
+function getModalNoticeElements() {
+  let modal = document.getElementById("global-modal-notice");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "global-modal-notice";
+    modal.className =
+      "hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4";
+    modal.innerHTML = `
+      <div class="bg-slate-800 border border-white/20 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl flex flex-col items-center" role="dialog" aria-modal="true" aria-labelledby="modal-notice-title">
+        <i id="modal-notice-icon" class="fa-solid fa-circle-check text-emerald-400 text-5xl mb-3" aria-hidden="true"></i>
+        <h3 id="modal-notice-title" class="text-xl font-bold text-white mb-2"></h3>
+        <p id="modal-notice-message" class="text-sm text-slate-300 mb-6"></p>
+        <p id="modal-notice-countdown" class="hidden text-2xl font-bold mb-6 font-mono" aria-live="polite"></p>
+        <div id="modal-notice-actions" class="w-full flex gap-3">
+          <button id="btn-modal-notice-cancel" type="button" class="hidden flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-2xl">Batal</button>
+          <button id="btn-modal-notice-ok" type="button" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-2xl">Lanjutkan</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  return {
+    modal,
+    title: modal.querySelector("#modal-notice-title"),
+    message: modal.querySelector("#modal-notice-message"),
+    icon: modal.querySelector("#modal-notice-icon"),
+    confirmButton: modal.querySelector("#btn-modal-notice-ok"),
+    cancelButton: modal.querySelector("#btn-modal-notice-cancel"),
+    countdown: modal.querySelector("#modal-notice-countdown"),
+  };
+}
+
 function showModalNotice(
   title,
   message,
@@ -86,20 +118,16 @@ function showModalNotice(
   onConfirm = null,
   countdownSeconds = 0,
 ) {
-  const modal = document.getElementById("global-modal-notice");
-  const modalTitle = document.getElementById("modal-notice-title");
-  const modalMessage = document.getElementById("modal-notice-message");
-  const modalIcon = document.getElementById("modal-notice-icon");
-  const btnConfirm = document.getElementById("btn-modal-notice-ok");
-  const btnCancel = document.getElementById("btn-modal-notice-cancel");
-  const countdown = document.getElementById("modal-notice-countdown");
-
+  const {
+    modal,
+    title: modalTitle,
+    message: modalMessage,
+    icon: modalIcon,
+    confirmButton: btnConfirm,
+    cancelButton: btnCancel,
+    countdown,
+  } = getModalNoticeElements();
   clearModalCountdown();
-  if (!modal) {
-    console.log(`${title}: ${message}`);
-    if (onConfirm) onConfirm();
-    return;
-  }
 
   modalTitle.textContent = title;
   modalMessage.textContent = message;
@@ -171,18 +199,15 @@ function showModalConfirm(
   confirmLabel = "Ya, Hapus",
   cancelLabel = "Batal",
 ) {
-  const modal = document.getElementById("global-modal-notice");
-  const modalTitle = document.getElementById("modal-notice-title");
-  const modalMessage = document.getElementById("modal-notice-message");
-  const modalIcon = document.getElementById("modal-notice-icon");
-  const btnConfirm = document.getElementById("btn-modal-notice-ok");
-  const btnCancel = document.getElementById("btn-modal-notice-cancel");
-
+  const {
+    modal,
+    title: modalTitle,
+    message: modalMessage,
+    icon: modalIcon,
+    confirmButton: btnConfirm,
+    cancelButton: btnCancel,
+  } = getModalNoticeElements();
   clearModalCountdown();
-  if (!modal || !btnConfirm || !btnCancel) {
-    if (window.confirm(`${title}\n\n${message}`) && onConfirm) onConfirm();
-    return;
-  }
 
   modalTitle.textContent = title;
   modalMessage.textContent = message;
@@ -195,18 +220,21 @@ function showModalConfirm(
   btnConfirm.textContent = confirmLabel;
   btnCancel.textContent = cancelLabel;
 
-  const closeModal = () => {
-    clearModalCountdown();
-    modal.classList.add("hidden");
-    btnConfirm.onclick = null;
-    btnCancel.onclick = null;
-  };
+  return new Promise((resolve) => {
+    const closeModal = (confirmed) => {
+      clearModalCountdown();
+      modal.classList.add("hidden");
+      btnConfirm.onclick = null;
+      btnCancel.onclick = null;
+      resolve(confirmed);
+    };
 
-  btnConfirm.onclick = () => {
-    closeModal();
-    if (typeof onConfirm === "function") onConfirm();
-  };
-  btnCancel.onclick = closeModal;
+    btnConfirm.onclick = () => {
+      closeModal(true);
+      if (typeof onConfirm === "function") onConfirm();
+    };
+    btnCancel.onclick = () => closeModal(false);
+  });
 }
 
 // Logika Perpindahan Halaman Kiosk

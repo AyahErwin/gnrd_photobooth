@@ -102,15 +102,21 @@ async function initializeKioskManagement() {
       e.preventDefault();
       btnSave.disabled = true;
       btnSave.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
-
-      const id = kioskIdInput.value;
-      const kiosk_code = sanitizeInput(codeInput.value.trim());
-      const kiosk_name = sanitizeInput(nameInput.value.trim());
-      const password = sanitizeInput(passwordInput.value.trim());
-      const package_type = packageTypeInput.value;
-      const location = sanitizeInput(locationInput.value.trim());
+      let saveController;
+      let saveTimeout;
+      let kiosk_code = "";
 
       try {
+        saveController = new AbortController();
+        saveTimeout = setTimeout(() => saveController.abort(), 20000);
+
+        const id = kioskIdInput.value;
+        kiosk_code = codeInput.value.trim();
+        const kiosk_name = nameInput.value.trim();
+        const password = passwordInput.value.trim();
+        const package_type = packageTypeInput.value;
+        const location = locationInput.value.trim();
+
         if (id) {
           const kioskUpdate = {
             kiosk_code,
@@ -123,7 +129,8 @@ async function initializeKioskManagement() {
           const { error } = await supabaseClient
             .from("kiosks")
             .update(kioskUpdate)
-            .eq("id", id);
+            .eq("id", id)
+            .abortSignal(saveController.signal);
 
           if (error) throw error;
           displayNotice(
@@ -142,7 +149,8 @@ async function initializeKioskManagement() {
               location,
               is_active: false,
             },
-          ]);
+          ])
+            .abortSignal(saveController.signal);
 
           if (error) throw error;
           displayNotice(
@@ -153,15 +161,18 @@ async function initializeKioskManagement() {
         }
 
         resetForm();
-        await fetchKiosks();
+        void fetchKiosks();
       } catch (err) {
         console.error("Gagal menyimpan data kios:", err);
         displayNotice(
           "Data Belum Tersimpan",
-          getFriendlyErrorMessage(err, "save", kiosk_code),
+          saveController && saveController.signal.aborted
+            ? "Server belum memberi respons setelah 20 detik. Periksa daftar kios sebelum mencoba menyimpan lagi."
+            : getFriendlyErrorMessage(err, "save", kiosk_code),
           "error",
         );
       } finally {
+        if (saveTimeout) clearTimeout(saveTimeout);
         btnSave.disabled = false;
         btnSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Simpan Data Kios`;
       }

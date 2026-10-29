@@ -17,36 +17,35 @@
   >
     <div
       id="staff-session-bar"
-      class="hidden absolute top-4 right-4 z-10 flex items-center gap-3"
+      class="hidden w-full max-w-xl mb-4 flex items-center justify-end gap-3"
     ></div>
-    <div
-      class="admin-ios-card max-w-xl w-full p-5 sm:p-8"
-    >
+    <main id="admin-dashboard-layout" class="w-full max-w-xl">
+      <div id="admin-settings-card" class="admin-ios-card w-full p-5 sm:p-8">
       <div class="flex items-center gap-3 mb-6 border-b border-gray-200 pb-4">
         <i class="fa-solid fa-sliders text-blue-600 text-3xl"></i>
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">Panel Konfigurasi Kiosk</h1>
-          <p class="text-xs text-gray-600">
+          <h1 id="admin-panel-title" class="text-2xl font-bold text-gray-900">Panel Konfigurasi Kiosk</h1>
+          <p id="admin-panel-desc" class="text-xs text-gray-600">
             Pengaturan Terpusat via Database Supabase
           </p>
         </div>
       </div>
 
-      <a
-        data-head-office-only
-        href="kiosks.html"
-        class="w-full py-3 bg-white border border-blue-200 hover:bg-blue-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-blue-700 transition-all mb-6"
-      >
-        <i class="fa-solid fa-store"></i> Kelola Data Kios
-      </a>
+      <div data-head-office-only class="space-y-3 mb-6">
+        <a
+          href="kiosks.html"
+          class="w-full py-3 bg-white border border-gray-400 hover:border-gray-500 hover:bg-gray-100 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 transition-all shadow-sm"
+        >
+          <i class="fa-solid fa-store text-gray-600"></i> Kelola Data Kios
+        </a>
 
-      <a
-        data-head-office-only
-        href="staff-users.html"
-        class="w-full py-3 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-700 transition-all mb-6"
-      >
-        <i class="fa-solid fa-users"></i> Kelola Akun Staf Kios
-      </a>
+        <a
+          href="staff-users.html"
+          class="w-full py-3 bg-white border border-gray-400 hover:border-gray-500 hover:bg-gray-100 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold text-gray-800 transition-all shadow-sm"
+        >
+          <i class="fa-solid fa-users text-gray-600"></i> Kelola Akun Staf Kios
+        </a>
+      </div>
 
       <div
         class="admin-ios-summary mb-6 p-4 rounded-2xl flex items-center gap-4"
@@ -74,24 +73,32 @@
       </div>
 
       <form id="form-admin-config" class="space-y-4 text-sm">
-        <div id="config-target-container" data-head-office-only>
-          <label
-            class="block font-semibold mb-1 text-gray-700"
-            for="config-target-kiosk"
-            >Kios yang dikonfigurasi</label
-          >
-          <select
-            id="config-target-kiosk"
-            class="admin-ios-control w-full bg-white border border-gray-300 rounded-xl p-3 text-gray-900"
-          ></select>
-        </div>
+        <p
+          id="head-office-config-note"
+          data-head-office-only
+          class="rounded-xl bg-blue-50 p-3.5 text-blue-800 text-xs sm:text-sm flex items-center gap-2.5 border border-blue-100"
+        >
+          <i class="fa-solid fa-circle-info text-blue-600 text-base"></i>
+          <span>Pengaturan ini bersifat terpusat dan otomatis berlaku untuk <strong>seluruh kios</strong>.</span>
+        </p>
 
         <p
           id="kiosk-admin-config-note"
-          class="hidden rounded-xl bg-blue-50 p-3 text-blue-800"
+          class="hidden rounded-xl bg-amber-50 p-3.5 text-amber-900 text-xs sm:text-sm flex items-center gap-2.5 border border-amber-200"
         >
-          Anda hanya dapat mengubah harga dan durasi QRIS untuk kios ini.
+          <i class="fa-solid fa-store text-amber-600 text-base"></i>
+          <span id="kiosk-admin-note-text">Anda hanya dapat mengubah harga dan durasi QRIS untuk kios Anda.</span>
         </p>
+
+        <div id="kiosk-admin-select-wrap" class="hidden">
+          <label for="kiosk-admin-select" class="mb-1 block font-semibold text-gray-700">
+            Pilih kios yang dikelola
+          </label>
+          <select
+            id="kiosk-admin-select"
+            class="admin-ios-control w-full rounded-xl border bg-white p-3 text-gray-900"
+          ></select>
+        </div>
 
         <div id="global-media-config" data-head-office-only class="space-y-4">
           <div>
@@ -153,19 +160,122 @@
           <a
             data-head-office-only
             href="index.html"
-            class="w-1/2 py-3.5 rounded-xl border border-gray-300 bg-white text-gray-700 text-center font-semibold hover:bg-gray-50 transition-all"
-            >Lihat Layar Kiosk</a
+            class="flex-1 py-3.5 rounded-xl border border-gray-400 hover:border-gray-500 bg-white text-gray-800 text-center font-semibold hover:bg-gray-100 transition-all shadow-sm flex items-center justify-center gap-2"
           >
+            <i class="fa-solid fa-desktop text-gray-600"></i> Lihat Layar Kiosk
+          </a>
           <button
             type="submit"
             id="btn-save"
-            class="w-1/2 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all flex justify-center items-center gap-2"
+            class="flex-1 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all flex justify-center items-center gap-2"
           >
             <i class="fa-solid fa-floppy-disk"></i> Simpan Ke Supabase
           </button>
         </div>
       </form>
-    </div>
+      </div>
+
+      <section
+        id="kiosk-revenue-summary"
+        class="admin-ios-card hidden w-full p-5 sm:p-8"
+        aria-labelledby="kiosk-revenue-summary-title"
+      >
+        <div class="mb-6 flex items-start justify-between gap-3 border-b border-gray-200 pb-4">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-chart-line text-blue-600 text-2xl"></i>
+            <div>
+              <h2 id="kiosk-revenue-summary-title" class="text-xl font-bold text-gray-900">
+                Pendapatan Harian
+              </h2>
+              <p class="text-xs text-gray-600">Ringkasan transaksi kios untuk tanggal yang dipilih (WIB)</p>
+            </div>
+          </div>
+          <button
+            id="btn-refresh-kiosk-revenue"
+            type="button"
+            class="rounded-xl border border-gray-400 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition-all hover:border-gray-500 hover:bg-gray-100"
+            aria-label="Muat ulang ringkasan pendapatan"
+            title="Muat ulang"
+          >
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <div class="mb-4">
+          <label for="kiosk-revenue-report-date" class="mb-1 block text-sm font-medium text-gray-700">
+            Tanggal transaksi
+          </label>
+          <input
+            id="kiosk-revenue-report-date"
+            type="date"
+            required
+            class="admin-ios-control w-full rounded-xl border p-3 text-gray-900 sm:max-w-xs"
+          />
+          <p id="kiosk-revenue-report-date-display" class="mt-1 text-xs text-gray-500"></p>
+        </div>
+
+        <div class="space-y-4">
+          <div class="admin-ios-summary rounded-2xl p-5">
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-600">
+              Total Pendapatan
+            </p>
+            <p id="kiosk-revenue-today-total" class="mt-2 text-3xl font-bold text-green-700">
+              Memuat...
+            </p>
+          </div>
+          <div class="admin-ios-summary rounded-2xl p-5">
+            <p class="text-xs font-bold uppercase tracking-wide text-gray-600">
+              Total Transaksi Customer
+            </p>
+            <p id="kiosk-revenue-today-count" class="mt-2 text-3xl font-bold text-gray-900">
+              Memuat...
+            </p>
+            <p id="kiosk-revenue-count-caption" class="mt-1 text-xs text-gray-600">
+              transaksi berhasil pada tanggal yang dipilih
+            </p>
+          </div>
+        </div>
+
+        <section class="mt-4 overflow-hidden rounded-2xl border border-gray-200">
+          <h3 class="bg-gray-50 px-4 py-3 font-semibold text-gray-800">
+            Detail Transaksi
+          </h3>
+          <div>
+            <table class="w-full table-fixed text-left text-sm text-gray-700">
+              <colgroup>
+                <col class="w-[12%]" />
+                <col class="w-[58%]" />
+                <col class="w-[30%]" />
+              </colgroup>
+              <thead class="bg-gray-50 text-gray-500">
+                <tr>
+                  <th class="px-2 py-3 text-xs sm:px-3">No.</th>
+                  <th class="px-2 py-3 text-xs sm:px-3">Tanggal &amp; Jam Transaksi</th>
+                  <th class="px-2 py-3 text-right text-xs sm:px-3">Nilai Transaksi</th>
+                </tr>
+              </thead>
+              <tbody
+                id="kiosk-revenue-transactions"
+                class="divide-y divide-gray-100 bg-white"
+              >
+                <tr>
+                  <td colspan="3" class="px-3 py-4 text-center text-gray-500">
+                    Memuat transaksi...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <p
+          id="kiosk-revenue-summary-status"
+          class="mt-4 text-sm text-gray-600"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </section>
+    </main>
 
     <!-- Container Komponen Modal Pop-Up Notifikasi Global -->
     <div id="modal-container"></div>

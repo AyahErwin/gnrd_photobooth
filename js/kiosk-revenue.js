@@ -3,6 +3,7 @@ function initializeKioskRevenueReport() {
   if (!form) return;
 
   const dateInput = document.getElementById("revenue-date");
+  const dateDisplay = document.getElementById("revenue-date-display");
   const submitButton = document.getElementById("btn-load-revenue");
   const message = document.getElementById("revenue-report-message");
   const reportContent = document.getElementById("revenue-report-content");
@@ -11,6 +12,19 @@ function initializeKioskRevenueReport() {
     currency: "IDR",
     maximumFractionDigits: 0,
   });
+  const reportDateFormatter = new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  function formatReportDate(dateValue) {
+    const [year, month, day] = dateValue.split("-").map(Number);
+    return reportDateFormatter.format(
+      new Date(Date.UTC(year, month - 1, day, 12)),
+    );
+  }
 
   function normalizeReportDate(rawValue) {
     if (!rawValue) return null;
@@ -58,6 +72,12 @@ function initializeKioskRevenueReport() {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  }
+
+  function updateReportDateDisplay() {
+    dateDisplay.textContent = dateInput.value
+      ? `Tanggal dipilih: ${formatReportDate(dateInput.value)}`
+      : "";
   }
 
   function showMessage(text, isError = false) {
@@ -132,6 +152,7 @@ function initializeKioskRevenueReport() {
     try {
       const normalizedDate = normalizeReportDate(dateInput.value) || localDateValue(new Date());
       dateInput.value = normalizedDate;
+      updateReportDateDisplay();
 
       const { data, error } = await supabaseClient.functions.invoke(
         "kiosk-revenue",
@@ -162,7 +183,7 @@ function initializeKioskRevenueReport() {
       renderRanking("revenue-lowest", data.lowest || []);
       renderRevenueByKiosk(data.revenueByKiosk || []);
       reportContent.classList.remove("hidden");
-      showMessage(`Laporan tanggal ${normalizedDate} berhasil dimuat.`);
+      showMessage(`Laporan tanggal ${formatReportDate(normalizedDate)} berhasil dimuat.`);
     } catch (error) {
       console.error("Gagal menampilkan laporan penghasilan:", error);
       showMessage(
@@ -181,6 +202,8 @@ function initializeKioskRevenueReport() {
     loadReport();
   });
 
+  dateInput.addEventListener("change", updateReportDateDisplay);
+  updateReportDateDisplay();
   loadReport();
 }
 

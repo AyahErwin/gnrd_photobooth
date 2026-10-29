@@ -1,7 +1,15 @@
+const kioskLoginTabSessionId = getOrCreateTabSessionId(true);
+
 async function initializeKioskLogin() {
   const loginForm = document.getElementById("form-kiosk-login");
   let failedAttempts = 0;
   let lockoutUntil = 0;
+
+  const sessionNotice = sessionStorage.getItem("gnrd_login_session_notice");
+  if (sessionNotice) {
+    showModalNotice("Informasi Login", sessionNotice, "warning");
+    sessionStorage.removeItem("gnrd_login_session_notice");
+  }
 
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -34,16 +42,18 @@ async function initializeKioskLogin() {
       const kioskPass = sanitizeInput(rawPass);
 
       try {
-        const { data, error } = await supabaseClient.functions.invoke(
-          "kiosk-revenue",
-          {
+        const tabSessionId = kioskLoginTabSessionId;
+        const requestLogin = (takeover = false) =>
+          supabaseClient.functions.invoke("kiosk-revenue", {
             body: {
               action: "login",
               kioskCode,
               kioskPassword: kioskPass,
+              tabSessionId,
+              takeover,
             },
-          },
-        );
+          });
+        let { data, error } = await requestLogin();
 
         if (error) {
           console.error("Gagal memeriksa login kiosk:", error);
@@ -53,6 +63,26 @@ async function initializeKioskLogin() {
             if (errorBody?.error) throw new Error(errorBody.error);
           }
           throw new Error("Kami belum bisa memeriksa data masuk. Periksa koneksi lalu coba lagi.");
+        }
+
+        if (data?.activeSession) {
+          const shouldTakeOver = await showModalConfirm(
+            "Akses ditolak",
+            "User yang Anda coba gunakan sedang online di tab/perangkat lain. Apakah Anda ingin berpindah perangkat? Jika Ya, perangkat lama akan keluar.",
+            null,
+            "Ya, Berpindah",
+            "Batal",
+          );
+          if (!shouldTakeOver) {
+            showModalNotice(
+              "Akses Ditolak",
+              "User yang Anda coba gunakan sedang online di tab/perangkat lain.",
+              "warning",
+            );
+            return;
+          }
+          ({ data, error } = await requestLogin(true));
+          if (error) throw error;
         }
 
         if (!data?.success || !data.kiosk || !data.sessionToken) {
@@ -82,9 +112,13 @@ async function initializeKioskLogin() {
 
         failedAttempts = 0;
         lockoutUntil = 0;
-        localStorage.setItem(
+        sessionStorage.setItem(
           "gnrd_active_kiosk",
-          JSON.stringify({ ...data.kiosk, sessionToken: data.sessionToken }),
+          JSON.stringify({
+            ...data.kiosk,
+            sessionToken: data.sessionToken,
+            tabSessionId,
+          }),
         );
         window.location.replace("index.html");
       } catch (err) {

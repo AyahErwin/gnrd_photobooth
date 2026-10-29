@@ -39,6 +39,8 @@ Deno.serve(async (request) => {
     expectedAmount?: number;
     date?: string;
     sessionToken?: string;
+    tabSessionId?: string;
+    takeover?: boolean;
   };
   try {
     body = await request.json();
@@ -51,7 +53,11 @@ Deno.serve(async (request) => {
   });
 
   async function getStaffProfile(): Promise<{
-    profile: { role: string; kiosk_id: string | null } | null;
+    profile: {
+      role: string;
+      kiosk_id: string | null;
+      kiosk_ids: string[];
+    } | null;
     error: unknown;
     unauthorized: boolean;
   }> {
@@ -73,7 +79,25 @@ Deno.serve(async (request) => {
       .select("role, kiosk_id")
       .eq("user_id", userData.user.id)
       .maybeSingle();
-    return { profile, error, unauthorized: false };
+    if (error || !profile) {
+      return { profile: null, error, unauthorized: false };
+    }
+
+    const { data: assignments, error: assignmentsError } = await serviceClient
+      .from("staff_kiosks")
+      .select("kiosk_id")
+      .eq("user_id", userData.user.id);
+    if (assignmentsError) {
+      return { profile: null, error: assignmentsError, unauthorized: false };
+    }
+
+    const kioskIds = (assignments || []).map((assignment) => assignment.kiosk_id);
+    if (kioskIds.length === 0 && profile.kiosk_id) kioskIds.push(profile.kiosk_id);
+    return {
+      profile: { ...profile, kiosk_ids: kioskIds },
+      error: null,
+      unauthorized: false,
+    };
   }
 
   async function hashToken(sessionToken: string) {
@@ -164,7 +188,68 @@ Deno.serve(async (request) => {
       return respond({ success: false });
     }
 
+    if (!body.tabSessionId || !/^[0-9a-f-]{36}$/i.test(body.tabSessionId)) {
+      return respond({ error: "ID sesi tab tidak valid. Muat ulang halaman login." }, 400);
+    }
+
+    const { data: claimStatus, error: claimError } = await serviceClient.rpc(
+      "claim_active_device_session",
+      {
+        p_account_key: `kiosk:${kiosk.id}`,
+        p_session_id: body.tabSessionId,
+        p_takeover: body.takeover === true,
+        p_stale_after_seconds: 45,
+      },
+    );
+    if (claimError) {
+      console.error("Gagal memeriksa sesi aktif kiosk:", claimError);
+      return respond({ error: "Status login kiosk belum bisa diperiksa." }, 500);
+    }
+    if (claimStatus === "conflict") {
+      return respond({ success: false, activeSession: true });
+    }
+
+    const { error: revokeError } = await serviceClient
+      .from("kiosk_sessions")
+      .delete()
+      .eq("kiosk_id", kiosk.id);
+    if (revokeError) {
+      console.error("Gagal menutup sesi kiosk sebelumnya:", revokeError);
+      return respond({ error: "Sesi perangkat sebelumnya belum berhasil ditutup." }, 500);
+    }
+
     return createKioskSession(kiosk);
+  }
+
+  if (body.action === "session_check") {
+    if (
+      !body.sessionToken ||
+      !body.tabSessionId ||
+      !/^[0-9a-f-]{36}$/i.test(body.tabSessionId)
+    ) {
+      return respond({ success: false, error: "Sesi perangkat tidak valid." }, 401);
+    }
+    const { data: session, error: sessionError } = await findActiveSession(body.sessionToken);
+    if (sessionError) {
+      console.error("Gagal memeriksa sesi perangkat kiosk:", sessionError);
+      return respond({ error: "Sesi perangkat belum bisa diperiksa." }, 500);
+    }
+    if (!session) return respond({ success: false });
+
+    const { data: claimStatus, error: claimError } = await serviceClient.rpc(
+      "claim_active_device_session",
+      {
+        p_account_key: `kiosk:${session.kiosk_id}`,
+        p_session_id: body.tabSessionId,
+        p_takeover: false,
+        p_stale_after_seconds: 45,
+      },
+    );
+    if (claimError) {
+      console.error("Gagal memperbarui sesi aktif kiosk:", claimError);
+      return respond({ error: "Status sesi perangkat belum bisa diperiksa." }, 500);
+    }
+    return respond({ success: claimStatus !== "conflict" });
   }
 
   if (body.action === "record") {
@@ -184,31 +269,38 @@ Deno.serve(async (request) => {
     if (session.kiosk_id !== body.kioskId) {
       return respond({ error: "Sesi login tidak cocok dengan kios ini." }, 403);
     }
-  }
 
-  if (body.action === "record") {
     if (!body.kioskId) {
       return respond({ error: "Data kios tidak ditemukan." }, 400);
     }
 
-    const [{ data: kiosk, error: kioskError }, { data: config, error: configError }] =
-      await Promise.all([
-        serviceClient.from("kiosks").select("id").eq("id", body.kioskId).maybeSingle(),
-        serviceClient
-          .from("kiosk_settings")
-          .select("price")
-          .eq("kiosk_id", body.kioskId)
-          .maybeSingle(),
-      ]);
+    const [
+      { data: kiosk, error: kioskError },
+      { data: config, error: configError },
+      { data: globalConfig, error: globalError },
+    ] = await Promise.all([
+      serviceClient.from("kiosks").select("id").eq("id", body.kioskId).maybeSingle(),
+      serviceClient
+        .from("kiosk_settings")
+        .select("price")
+        .eq("kiosk_id", body.kioskId)
+        .maybeSingle(),
+      serviceClient
+        .from("app_config")
+        .select("price")
+        .order("id", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
     if (kioskError || configError) {
       console.error("Gagal memeriksa data transaksi:", kioskError || configError);
       return respond({ error: "Pembayaran belum tercatat. Silakan coba lagi." }, 500);
     }
     if (!kiosk) return respond({ error: "Data kios tidak ditemukan." }, 404);
-    if (!config) return respond({ error: "Pengaturan harga kios belum tersedia." }, 409);
 
-    const amount = Number(config?.price);
+    const rawAmount = config?.price ?? globalConfig?.price ?? 50000;
+    const amount = Number(rawAmount);
     if (!Number.isSafeInteger(amount) || amount <= 0) {
       return respond({ error: "Harga sesi belum diatur dengan benar." }, 409);
     }
@@ -247,7 +339,7 @@ Deno.serve(async (request) => {
       await Promise.all([
         serviceClient
           .from("app_config")
-          .select("qris_image_url, video_url")
+          .select("price, qris_time, qris_image_url, video_url")
           .order("id", { ascending: true })
           .limit(1)
           .maybeSingle(),
@@ -258,15 +350,18 @@ Deno.serve(async (request) => {
           .maybeSingle(),
       ]);
 
-    if (configError || settingsError || !settings) {
-      console.error("Gagal memuat konfigurasi kiosk:", configError || settingsError);
+    if (configError) {
+      console.error("Gagal memuat konfigurasi kiosk:", configError);
       return respond({ error: "Konfigurasi kios belum bisa dimuat. Silakan hubungi pengelola." }, 500);
     }
 
+    const price = settings?.price ?? globalConfig?.price ?? 50000;
+    const qrisTime = settings?.qris_time ?? globalConfig?.qris_time ?? 180;
+
     return respond({
       config: {
-        price: settings.price,
-        qrisTime: settings.qris_time,
+        price,
+        qrisTime,
         qrisImage: globalConfig?.qris_image_url || "",
         videoUrl: globalConfig?.video_url || "",
       },
@@ -283,6 +378,20 @@ Deno.serve(async (request) => {
       return respond({ error: "Sesi kios belum bisa diperiksa. Silakan coba lagi." }, 500);
     }
     if (!session) return respond({ success: true });
+
+    if (body.tabSessionId) {
+      const { error: releaseError } = await serviceClient.rpc(
+        "release_active_device_session",
+        {
+          p_account_key: `kiosk:${session.kiosk_id}`,
+          p_session_id: body.tabSessionId,
+        },
+      );
+      if (releaseError) {
+        console.error("Gagal melepaskan sesi aktif kiosk:", releaseError);
+        return respond({ error: "Sesi perangkat belum berhasil diakhiri." }, 500);
+      }
+    }
 
     const { error: deleteError } = await serviceClient
       .from("kiosk_sessions")
@@ -331,6 +440,13 @@ Deno.serve(async (request) => {
     if (!profile || !["owner", "hq_admin", "kiosk_admin"].includes(profile.role)) {
       return respond({ error: "Akun ini tidak memiliki akses ke laporan penghasilan." }, 403);
     }
+    if (
+      profile.role === "kiosk_admin" &&
+      body.kioskId &&
+      !profile.kiosk_ids.includes(body.kioskId)
+    ) {
+      return respond({ error: "Akun ini tidak ditugaskan ke kios yang dipilih." }, 403);
+    }
 
     if (!body.date || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) {
       return respond({ error: "Pilih tanggal laporan yang benar." }, 400);
@@ -360,7 +476,11 @@ Deno.serve(async (request) => {
     }
 
     const visibleKiosks = profile.role === "kiosk_admin"
-      ? (kiosks || []).filter((kiosk) => kiosk.id === profile.kiosk_id)
+      ? (kiosks || []).filter(
+          (kiosk) =>
+            profile.kiosk_ids.includes(kiosk.id) &&
+            (!body.kioskId || kiosk.id === body.kioskId),
+        )
       : kiosks || [];
     const revenueByKiosk = visibleKiosks.map((kiosk) => ({
       id: kiosk.id,
@@ -370,6 +490,40 @@ Deno.serve(async (request) => {
       revenue: Number(kiosk.revenue),
       transactionCount: Number(kiosk.transaction_count),
     }));
+    const visibleKioskIds = visibleKiosks.map((kiosk) => kiosk.id);
+    const transactions: Array<{
+      id: string;
+      amount: number;
+      created_at: string;
+    }> = [];
+    if (visibleKioskIds.length > 0) {
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data: transactionPage, error: transactionsError } = await serviceClient
+          .from("kiosk_transactions")
+          .select("id, amount, created_at")
+          .in("kiosk_id", visibleKioskIds)
+          .gte("created_at", start.toISOString())
+          .lt("created_at", end.toISOString())
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, from + pageSize - 1);
+
+        if (transactionsError) {
+          console.error("Gagal mengambil detail transaksi:", transactionsError);
+          return respond({ error: "Detail transaksi belum bisa dimuat. Silakan coba lagi." }, 500);
+        }
+
+        transactions.push(
+          ...(transactionPage || []).map((transaction) => ({
+            id: transaction.id,
+            amount: Number(transaction.amount),
+            created_at: transaction.created_at,
+          })),
+        );
+        if (!transactionPage || transactionPage.length < pageSize) break;
+      }
+    }
     const ranked = [...revenueByKiosk].sort(
       (a, b) => b.revenue - a.revenue || a.kiosk_name.localeCompare(b.kiosk_name),
     );
@@ -381,6 +535,7 @@ Deno.serve(async (request) => {
         (sum, kiosk) => sum + kiosk.transactionCount,
         0,
       ),
+      transactions,
       revenueByKiosk,
       highest: ranked.slice(0, 5),
       lowest: ranked.slice(-5).reverse(),

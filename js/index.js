@@ -14,7 +14,11 @@ window.handleLogoutKiosk = async () => {
       }
 
       const { error } = await supabaseClient.functions.invoke("kiosk-revenue", {
-        body: { action: "logout", sessionToken: activeKiosk.sessionToken },
+        body: {
+          action: "logout",
+          sessionToken: activeKiosk.sessionToken,
+          tabSessionId: activeKiosk.tabSessionId,
+        },
       });
       if (error) {
         console.error("Gagal mengakhiri sesi kiosk:", error);
@@ -26,7 +30,8 @@ window.handleLogoutKiosk = async () => {
         return;
       }
 
-      localStorage.removeItem("gnrd_active_kiosk");
+      sessionStorage.removeItem("gnrd_active_kiosk");
+      sessionStorage.removeItem("gnrd_active_tab_session_id");
       window.location.replace("login.html");
     },
     "Ya, Keluar",
